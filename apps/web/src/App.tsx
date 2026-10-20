@@ -61,6 +61,7 @@ const AdminCustomFields = page(() => import('./pages/admin/custom-fields'));
 const AdminIntegrations = page(() => import('./pages/admin/integrations'));
 const AdminSystem = page(() => import('./pages/admin/system'));
 const AdminAudit = page(() => import('./pages/admin/audit'));
+const AdminImport = page(() => import('./pages/admin/import'));
 
 function Guard({ perm, children }: { perm?: Permission; children: ReactNode }) {
   const { can } = useAuth();
@@ -157,6 +158,7 @@ export function App() {
         {r('/admin/integrations', AdminIntegrations, 'integrations.read')}
         {r('/admin/system', AdminSystem, 'settings.manage')}
         {r('/admin/audit', AdminAudit, 'audit.read')}
+        {r('/admin/import', AdminImport, 'companies.write')}
         <Route path="*" element={<EmptyState title="Page not found" description="The page you are looking for does not exist." />} />
       </Route>
     </Routes>
