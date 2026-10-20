@@ -15,6 +15,8 @@ import { FormField, FormGrid, FormSection, handleFormError } from '@/components/
 import { SettingsTable } from '@/components/admin/settings-table';
 import { timezoneOptions } from '@/components/admin/timezones';
 import { useTabParam } from '@/components/admin/tabs';
+import { InboundEmailLog } from '@/components/admin/inbound-email';
+import { EntityPicker } from '@/components/entity-picker';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRow = { id: number } & Record<string, any>;
@@ -162,7 +164,13 @@ function GeneralSettings() {
   const [f, setF] = useState<SystemSettings>({});
   useEffect(() => q.data && setF(q.data), [q.data]);
   const save = useMutation({
-    mutationFn: () => api.put('/settings/system', { ...f, defaultWorkTypeId: f.defaultWorkTypeId ? Number(f.defaultWorkTypeId) : null }),
+    mutationFn: () =>
+      api.put('/settings/system', {
+        ...f,
+        defaultWorkTypeId: f.defaultWorkTypeId ? Number(f.defaultWorkTypeId) : null,
+        inboundEmailCompanyId: f.inboundEmailCompanyId ? Number(f.inboundEmailCompanyId) : null,
+        inboundEmailQueueId: f.inboundEmailQueueId ? Number(f.inboundEmailQueueId) : null,
+      }),
     onSuccess: () => {
       toast.success('Settings saved');
       qc.invalidateQueries({ queryKey: ['system-settings'] });
@@ -215,10 +223,23 @@ function GeneralSettings() {
             <Textarea rows={2} value={String(f.invoiceFooter ?? '')} onChange={(e) => setF({ ...f, invoiceFooter: e.target.value })} />
           </FormField>
         </FormSection>
+        <FormSection title="Inbound e-mail">
+          <FormGrid cols={2}>
+            <FormField label="Company for unknown senders" hint="Leave empty to reject e-mail from senders who are not a contact or a known company domain">
+              <EntityPicker kind="company" value={f.inboundEmailCompanyId ? Number(f.inboundEmailCompanyId) : null} onChange={(id) => setF({ ...f, inboundEmailCompanyId: id })} placeholder="Reject unknown senders" />
+            </FormField>
+            <FormField label="Queue for e-mail tickets">
+              <Select value={String(f.inboundEmailQueueId ?? '')} onChange={(e) => setF({ ...f, inboundEmailQueueId: e.target.value || null })} placeholder="—" options={opts(lookups.data?.queues)} />
+            </FormField>
+          </FormGrid>
+        </FormSection>
         <Button variant="primary" loading={save.isPending} onClick={() => save.mutate()}>
           Save settings
         </Button>
       </CardBody>
+      <div className="border-t border-border p-4">
+        <InboundEmailLog />
+      </div>
     </Card>
   );
 }

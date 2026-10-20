@@ -6,6 +6,19 @@ import { countAll, paginated, parseList, whereAll } from '../../lib/query.js';
 import { currentUser } from '../../lib/context.js';
 
 export async function notificationRoutes(app: FastifyInstance) {
+  /** Inbound e-mail processing log (administrators). */
+  app.get('/inbound-emails', { config: { perm: 'settings.manage' } }, async (req) => {
+    const q = parseList(req.query);
+    const rows = await app.db
+      .select()
+      .from(s.inboundEmails)
+      .orderBy(desc(s.inboundEmails.receivedAt))
+      .limit(q.pageSize)
+      .offset((q.page - 1) * q.pageSize);
+    const [{ n }] = (await app.db.select({ n: countAll }).from(s.inboundEmails)) as [{ n: number }];
+    return { ...paginated(rows, n, q), imapConfigured: !!(app.config.IMAP_HOST && app.config.IMAP_USER), smtpConfigured: !!(app.config.SMTP_HOST && app.config.SMTP_FROM) };
+  });
+
   app.get('/notifications', async (req) => {
     const me = currentUser(req);
     const q = parseList(req.query);

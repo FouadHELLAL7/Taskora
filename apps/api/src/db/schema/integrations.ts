@@ -38,6 +38,24 @@ export const syncRuns = pgTable(
   (t) => [index('sync_runs_provider_idx').on(t.provider, t.startedAt)],
 );
 
+/** Log of e-mails received by the inbound mailbox poller (also used for de-duplication). */
+export const inboundEmails = pgTable(
+  'inbound_emails',
+  {
+    id: id(),
+    messageId: text('message_id').notNull().unique(),
+    fromAddress: text('from_address').notNull(),
+    fromName: text('from_name'),
+    subject: text('subject'),
+    /** 'created' | 'appended' | 'rejected' | 'failed' */
+    status: text('status').notNull(),
+    ticketId: integer('ticket_id'),
+    detail: text('detail'),
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('inbound_emails_received_idx').on(t.receivedAt)],
+);
+
 /** Explicit Action1 organization → Taskora company mapping (never guessed). */
 export const action1Organizations = pgTable('action1_organizations', {
   id: id(),

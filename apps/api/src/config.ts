@@ -35,6 +35,13 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional(),
+  /** Optional IMAP mailbox polled by the worker to create/append tickets from e-mail. */
+  IMAP_HOST: z.string().optional(),
+  IMAP_PORT: z.coerce.number().int().default(993),
+  IMAP_SECURE: bool(true),
+  IMAP_USER: z.string().optional(),
+  IMAP_PASSWORD: z.string().optional(),
+  IMAP_MAILBOX: z.string().default('INBOX'),
 });
 
 export type Config = z.infer<typeof envSchema> & { encryptionKey: Buffer };

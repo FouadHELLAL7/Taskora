@@ -14,6 +14,7 @@ import { runSlaMonitor } from './jobs/sla-monitor.js';
 import { runStatusAgeRules } from './modules/automation/engine.js';
 import { runAction1Sync } from './integrations/action1/sync.js';
 import { dispatchNotificationEmails, expireStaleEmails, smtpConfigured } from './jobs/email.js';
+import { imapConfigured, pollInbox } from './jobs/inbound-email.js';
 
 const config = loadConfig();
 const log = pino({ level: config.LOG_LEVEL, base: { svc: 'worker' } });
@@ -30,6 +31,7 @@ const handlers: Record<string, Handler> = {
       userId: (job.payload.userId as number | null) ?? null,
     }),
   'email.dispatch': (db, cfg) => dispatchNotificationEmails(db, cfg),
+  'email.inbound': (db, cfg) => pollInbox(db, cfg, (m) => log.info({ job: 'email.inbound' }, m)),
   'maintenance.cleanup': async (db) => {
     await expireStaleEmails(db);
     await db.execute(sql`delete from sessions where expires_at < now()`);
@@ -44,6 +46,7 @@ async function schedule(db: Db) {
   await enqueue(db, 'sla.check', {}, { dedupeKey: 'sla.check', maxAttempts: 1 });
   await enqueue(db, 'workflow.status_age', {}, { dedupeKey: 'workflow.status_age', maxAttempts: 1 });
   if (smtpConfigured(config)) await enqueue(db, 'email.dispatch', {}, { dedupeKey: 'email.dispatch', maxAttempts: 1 });
+  if (imapConfigured(config)) await enqueue(db, 'email.inbound', {}, { dedupeKey: 'email.inbound', maxAttempts: 1 });
   const [a1] = await db
     .select()
     .from(integrations)

@@ -22,6 +22,10 @@ export const systemSettingsSchema = z.object({
   invoicePaymentTermsDays: z.coerce.number().int().min(0).max(365).default(30),
   invoiceFooter: z.string().max(2000).default(''),
   companyAddress: z.string().max(1000).default(''),
+  /** Company used for e-mail tickets from unknown senders (null = reject them). */
+  inboundEmailCompanyId: z.number().int().positive().nullable().default(null),
+  /** Queue for tickets created from e-mail. */
+  inboundEmailQueueId: z.number().int().positive().nullable().default(null),
 });
 export type SystemSettings = z.infer<typeof systemSettingsSchema>;
 
