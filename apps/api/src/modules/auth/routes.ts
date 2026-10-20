@@ -44,7 +44,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post(
     '/setup',
-    { config: { public: true, rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    { config: { public: true, rateLimit: { max: app.config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const input = setupSchema.parse(req.body);
       if ((await userCount(app)) > 0) throw conflict('Setup has already been completed');
@@ -76,7 +76,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post(
     '/auth/login',
-    { config: { public: true, rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    { config: { public: true, rateLimit: { max: app.config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const input = loginSchema.parse(req.body);
       const [user] = await app.db.select().from(users).where(sql`lower(${users.email}) = ${input.email}`);
@@ -142,6 +142,31 @@ export async function authRoutes(app: FastifyInstance) {
     // Invalidate all other sessions.
     await app.db.delete(sessions).where(sql`${sessions.userId} = ${me.id} and ${sessions.id} <> ${req.sessionId}`);
     await audit(app.db, req, { action: 'update', entityType: 'user', entityId: me.id, summary: 'Password changed' });
+    return { ok: true };
+  });
+
+  /** The signed-in user's active sessions (devices). */
+  app.get('/auth/sessions', async (req) => {
+    const me = currentUser(req);
+    const rows = await app.db
+      .select({ id: sessions.id, createdAt: sessions.createdAt, lastSeenAt: sessions.lastSeenAt, expiresAt: sessions.expiresAt, ip: sessions.ip, userAgent: sessions.userAgent })
+      .from(sessions)
+      .where(sql`${sessions.userId} = ${me.id} and ${sessions.expiresAt} > now()`)
+      .orderBy(sql`${sessions.lastSeenAt} desc`);
+    return { data: rows.map((r) => ({ ...r, id: r.id.slice(0, 16), current: r.id === req.sessionId })) };
+  });
+
+  /** Signs out one session (by id prefix) or, with `all`, every other session. */
+  app.delete('/auth/sessions/:id', async (req) => {
+    const me = currentUser(req);
+    const { id } = req.params as { id: string };
+    if (id === 'others') {
+      await app.db.delete(sessions).where(sql`${sessions.userId} = ${me.id} and ${sessions.id} <> ${req.sessionId}`);
+    } else {
+      if (!/^[0-9a-f]{16}$/.test(id)) throw badRequest('Invalid session id');
+      await app.db.delete(sessions).where(sql`${sessions.userId} = ${me.id} and left(${sessions.id}, 16) = ${id} and ${sessions.id} <> ${req.sessionId}`);
+    }
+    await audit(app.db, req, { action: 'logout', entityType: 'user', entityId: me.id, summary: id === 'others' ? 'Signed out other sessions' : 'Signed out a session' });
     return { ok: true };
   });
 

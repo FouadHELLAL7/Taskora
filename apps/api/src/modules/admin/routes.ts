@@ -111,6 +111,14 @@ export async function adminRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  /** Forces a user to sign in again on every device. */
+  app.post('/users/:id/revoke-sessions', { config: { perm: 'users.manage' } }, async (req) => {
+    const id = idOf(req);
+    const removed = await app.db.delete(s.sessions).where(eq(s.sessions.userId, id)).returning({ id: s.sessions.id });
+    await audit(app.db, req, { action: 'update', entityType: 'user', entityId: id, summary: `Revoked ${removed.length} session(s)` });
+    return { revoked: removed.length };
+  });
+
   /* ---------------------------------------------------------------- roles */
 
   app.get('/roles', { config: { perm: 'users.manage' } }, async () => {

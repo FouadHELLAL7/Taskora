@@ -21,7 +21,7 @@ export async function createTestApp(env: Record<string, string> = {}): Promise<T
   const db = drizzle(client, { schema }) as unknown as Db;
   await migrate(db as never, { migrationsFolder: migrationsFolder() });
   await seedBase(db);
-  const config = loadConfig({ NODE_ENV: 'test', LOG_LEVEL: 'silent', TASKORA_SETUP_TOKEN: 'test-setup-token-123456', UPLOAD_DIR: './.data/test-uploads', ...env });
+  const config = loadConfig({ NODE_ENV: 'test', LOG_LEVEL: 'silent', TASKORA_SETUP_TOKEN: 'test-setup-token-123456', UPLOAD_DIR: './.data/test-uploads', AUTH_RATE_LIMIT_PER_MINUTE: '1000', ...env });
   const app = await buildApp({ db, config, logger: false });
   await app.ready();
   return {

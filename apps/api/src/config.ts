@@ -26,6 +26,8 @@ const envSchema = z.object({
   /** Allows overriding Action1 base URLs (tests / proxies). */
   ACTION1_BASE_URL_OVERRIDE: z.string().url().optional(),
   WORKER_POLL_MS: z.coerce.number().int().min(200).default(2000),
+  /** Login/setup attempts allowed per client IP per minute. */
+  AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10000).default(10),
   /** Public base URL used in e-mail links, e.g. https://psa.example.com */
   PUBLIC_URL: z.string().url().optional(),
   /** Optional SMTP relay for e-mail notifications (in-app notifications always work). */

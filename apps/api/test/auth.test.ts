@@ -85,6 +85,43 @@ describe('sessions', () => {
   });
 });
 
+describe('login rate limiting', () => {
+  it('throttles repeated login attempts from one address', async () => {
+    const limited = await createTestApp({ AUTH_RATE_LIMIT_PER_MINUTE: '3' });
+    try {
+      const c = new Client(limited.app);
+      const codes: number[] = [];
+      for (let i = 0; i < 5; i++) codes.push((await c.post('/api/v1/auth/login', { email: 'x@example.test', password: 'whatever-123' })).status);
+      expect(codes.slice(0, 3)).toEqual([401, 401, 401]);
+      expect(codes[4]).toBe(429);
+    } finally {
+      await limited.close();
+    }
+  });
+});
+
+describe('session management', () => {
+  it('lists own sessions and signs out the others', async () => {
+    const a = await userClient(ctx, 'technician');
+    const email = (await a.get('/api/v1/auth/me')).body.user.email;
+    const b = new Client(ctx.app);
+    await b.login(email, 'Correct-Horse-42');
+    const list = await a.get('/api/v1/auth/sessions');
+    expect(list.body.data).toHaveLength(2);
+    expect(list.body.data.filter((s: { current: boolean }) => s.current)).toHaveLength(1);
+    expect((await a.delete('/api/v1/auth/sessions/others')).status).toBe(200);
+    expect((await b.get('/api/v1/auth/me')).status).toBe(401);
+    expect((await a.get('/api/v1/auth/me')).status).toBe(200);
+  });
+
+  it('lets administrators revoke all sessions of a user', async () => {
+    const admin = await userClient(ctx, 'administrator');
+    const tech = await userClient(ctx, 'technician');
+    expect((await admin.post(`/api/v1/users/${tech.userId}/revoke-sessions`)).body.revoked).toBe(1);
+    expect((await tech.get('/api/v1/auth/me')).status).toBe(401);
+  });
+});
+
 describe('permissions', () => {
   it('blocks read-only users from writing and from admin endpoints', async () => {
     const ro = await userClient(ctx, 'read_only');

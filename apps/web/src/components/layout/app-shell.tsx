@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronsLeft, ChevronsRight, LogOut, Mail, Moon, Plus, Search, Sun, Monitor, KeyRound, Keyboard } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Laptop, LogOut, Mail, Moon, Plus, Search, Sun, Monitor, KeyRound, Keyboard } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth, useMe } from '@/lib/auth';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import { NotificationBell } from './notification-bell';
 import { useTheme } from '@/hooks/use-theme';
 import { ShortcutsDialog, useGlobalShortcuts } from './shortcuts';
 import { ChangePasswordDialog } from './change-password';
+import { SessionsDialog } from './sessions';
 
 function readCollapsed() {
   try {
@@ -36,6 +37,7 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -180,6 +182,9 @@ export function AppShell() {
                     <Mail /> E-mail notifications: {me.preferences.emailNotifications === false ? 'off' : 'on'}
                   </DropdownItem>
                 )}
+                <DropdownItem onSelect={() => setSessionsOpen(true)}>
+                  <Laptop /> Active sessions
+                </DropdownItem>
                 <DropdownItem onSelect={() => setPwOpen(true)}>
                   <KeyRound /> Change password
                 </DropdownItem>
@@ -202,6 +207,7 @@ export function AppShell() {
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
+      <SessionsDialog open={sessionsOpen} onOpenChange={setSessionsOpen} />
     </div>
   );
 }
