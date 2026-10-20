@@ -8,6 +8,7 @@ export interface TicketDetail {
   companyId: number;
   companyName: string;
   companyPhone: string | null;
+  companyLogoUpdatedAt: string | null;
   contactId: number | null;
   contactName: string | null;
   contactEmail: string | null;

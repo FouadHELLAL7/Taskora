@@ -113,11 +113,22 @@ export function ConfirmDialog({
 export const DropdownMenu = DropdownPrimitive.Root;
 export const DropdownTrigger = DropdownPrimitive.Trigger;
 
-export function DropdownContent({ children, align = 'end', className }: { children: ReactNode; align?: 'start' | 'end' | 'center'; className?: string }) {
+export function DropdownContent({
+  children,
+  align = 'end',
+  side,
+  className,
+}: {
+  children: ReactNode;
+  align?: 'start' | 'end' | 'center';
+  side?: 'top' | 'right' | 'bottom' | 'left';
+  className?: string;
+}) {
   return (
     <DropdownPrimitive.Portal>
       <DropdownPrimitive.Content
         align={align}
+        side={side}
         sideOffset={4}
         className={cn('z-50 min-w-44 rounded-md border border-border bg-surface p-1 text-[13px] shadow-lg', className)}
       >

@@ -42,6 +42,8 @@ import { TicketChecklist } from '@/components/tickets/checklist';
 import { useTimer } from '@/components/layout/timer-widget';
 import { handleFormError } from '@/components/form';
 import type { TicketDetail, TimelineItem } from '@/components/tickets/ticket-types';
+import { SendEmailDialog } from '@/components/tickets/email-dialog';
+import { CompanyLogo } from '@/components/logo';
 
 interface CiSummary {
   id: number;
@@ -72,6 +74,7 @@ export default function TicketDetailPage() {
   const timeline = useQuery({ queryKey: ['timeline', id], queryFn: () => api.get<{ data: TimelineItem[] }>(`/tickets/${id}/timeline`) });
   const [filter, setFilter] = useState<'all' | 'notes' | 'public' | 'history' | 'time'>('all');
   const [logTime, setLogTime] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [resolveOpen, setResolveOpen] = useState<number | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editDescription, setEditDescription] = useState(false);
@@ -182,6 +185,11 @@ export default function TicketDetailPage() {
             {can('time.write') && (
               <Button onClick={() => setLogTime(true)}>
                 <Clock /> Log time
+              </Button>
+            )}
+            {canWrite && (
+              <Button onClick={() => setEmailOpen(true)}>
+                <Mail /> Send e-mail
               </Button>
             )}
             <Button onClick={() => watch.mutate(!t.isWatching)} loading={watch.isPending}>
@@ -426,6 +434,7 @@ export default function TicketDetailPage() {
       </div>
 
       <LogTimeDialog open={logTime} onOpenChange={setLogTime} ticketId={id} />
+      {canWrite && <SendEmailDialog ticket={t} open={emailOpen} onOpenChange={setEmailOpen} onSent={refresh} />}
       {resolveOpen !== null && (
         <ResolveDialog
           statusId={resolveOpen}
@@ -737,7 +746,7 @@ function ContactCard({ t, canWrite, onChange }: { t: TicketDetail; canWrite: boo
           <p className="text-xs text-muted">No contact linked.</p>
         )}
         <div className="flex items-center gap-1.5 border-t border-border pt-2 text-[13px]">
-          <Building2 className="size-3.5 text-muted" />
+          {t.companyLogoUpdatedAt ? <CompanyLogo companyId={t.companyId} name={t.companyName} logoUpdatedAt={t.companyLogoUpdatedAt} className="size-5" /> : <Building2 className="size-3.5 text-muted" />}
           <Link to={`/companies/${t.companyId}`} className="font-medium hover:text-primary">
             {t.companyName}
           </Link>

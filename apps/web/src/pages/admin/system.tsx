@@ -15,7 +15,7 @@ import { FormField, FormGrid, FormSection, handleFormError } from '@/components/
 import { SettingsTable } from '@/components/admin/settings-table';
 import { timezoneOptions } from '@/components/admin/timezones';
 import { useTabParam } from '@/components/admin/tabs';
-import { InboundEmailLog } from '@/components/admin/inbound-email';
+import { LogoEditor } from '@/components/logo';
 import { SystemHealth } from '@/components/admin/system-health';
 import { EntityPicker } from '@/components/entity-picker';
 
@@ -200,6 +200,16 @@ function GeneralSettings() {
             </FormField>
             {text('currency', 'Currency (ISO code)', { maxLength: 3 })}
           </FormGrid>
+          <FormField label="Logo" hint="Shown in the sidebar and on the sign-in pages">
+            <LogoEditor
+              kind="organization"
+              logoUpdatedAt={q.data.logoUpdatedAt ? String(q.data.logoUpdatedAt) : null}
+              onChanged={() => {
+                qc.invalidateQueries({ queryKey: ['system-settings'] });
+                qc.invalidateQueries({ queryKey: ['me'] });
+              }}
+            />
+          </FormField>
           <FormField label="Company address (invoices)">
             <Textarea rows={3} value={String(f.companyAddress ?? '')} onChange={(e) => setF({ ...f, companyAddress: e.target.value })} />
           </FormField>
@@ -242,9 +252,6 @@ function GeneralSettings() {
           Save settings
         </Button>
       </CardBody>
-      <div className="border-t border-border p-4">
-        <InboundEmailLog />
-      </div>
     </Card>
   );
 }

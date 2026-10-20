@@ -19,6 +19,7 @@ import { CustomFieldsView } from '@/components/custom-fields';
 import { RelatedCis, RelatedContracts, RelatedProjects, RelatedTickets } from '@/components/related-tables';
 import { Attachments } from '@/pages/tickets/detail';
 import { handleFormError } from '@/components/form';
+import { CompanyLogo, LogoEditor } from '@/components/logo';
 
 interface Company extends CompanyRecord {
   accountManagerName: string | null;
@@ -27,6 +28,7 @@ interface Company extends CompanyRecord {
   primaryContactEmail: string | null;
   primaryContactPhone: string | null;
   defaultSlaName: string | null;
+  logoUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,7 +72,7 @@ export default function CompanyDetailPage() {
     <div>
       <PageHeader
         title={c.name}
-        icon={<Building2 />}
+        icon={c.logoUpdatedAt ? <CompanyLogo companyId={c.id} name={c.name} logoUpdatedAt={c.logoUpdatedAt} className="size-9 ring-0" /> : <Building2 />}
         breadcrumbs={[{ label: 'Companies', to: '/companies' }, { label: c.name }]}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
@@ -152,6 +154,17 @@ export default function CompanyDetailPage() {
               <Card>
                 <CardHeader title="Company details" />
                 <CardBody className="space-y-3 text-[13px]">
+                  <LogoEditor
+                    kind="company"
+                    id={c.id}
+                    name={c.name}
+                    logoUpdatedAt={c.logoUpdatedAt}
+                    disabled={!can('companies.write')}
+                    onChanged={() => {
+                      qc.invalidateQueries({ queryKey: ['company', id] });
+                      qc.invalidateQueries({ queryKey: ['companies'] });
+                    }}
+                  />
                   {c.phone && (
                     <a href={`tel:${c.phone}`} className="flex items-center gap-2 hover:text-primary">
                       <Phone className="size-3.5 text-muted" /> {c.phone}

@@ -6,7 +6,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { BookOpen, Building2, Contact, FileSignature, FolderKanban, HardDrive, Plus, Search, Ticket } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { NAV } from './nav';
+import { flatNav } from './nav';
 import { Spinner } from '../ui/misc';
 
 interface Hit {
@@ -67,7 +67,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     return acc;
   }, {});
 
-  const pages = NAV.flatMap((s) => s.items).filter((i) => !i.perm || can(i.perm));
+  const pages = flatNav().filter((i) => !i.perm || can(i.perm));
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
