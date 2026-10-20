@@ -1,6 +1,7 @@
-import { PageHeader } from '@/components/page';
+import { Cpu } from 'lucide-react';
+import { CiListPage } from './list';
 
-// STUB: replaced by the real implementation.
-export default function Page() {
-  return <PageHeader title="assets/devices" subtitle="Not implemented yet" />;
+/** Endpoint-focused view of the CMDB: workstations, servers, mobile and network devices. */
+export default function DevicesPage() {
+  return <CiListPage title="Devices" subtitle="Workstations, servers, mobile and network devices" icon={<Cpu />} fixed={{ category: 'workstation,server,mobile,network' }} />;
 }

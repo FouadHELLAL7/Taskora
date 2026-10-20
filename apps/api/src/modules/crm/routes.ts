@@ -226,6 +226,12 @@ export async function crmRoutes(app: FastifyInstance) {
     return paginated(rows.map((r) => ({ ...r.location, companyName: r.companyName })), n, q);
   });
 
+  app.get('/locations/:id', { config: { perm: 'companies.read' } }, async (req) => {
+    const [row] = await app.db.select().from(s.locations).where(eq(s.locations.id, idOf(req)));
+    if (!row) throw notFound('Location');
+    return row;
+  });
+
   app.post('/locations', { config: { perm: 'companies.write' } }, async (req, reply) => {
     const input = locationSchema.parse(req.body);
     const row = await app.db.transaction(async (tx) => {
