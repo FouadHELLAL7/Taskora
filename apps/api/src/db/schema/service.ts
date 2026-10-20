@@ -428,6 +428,42 @@ export const ticketTemplates = pgTable('ticket_templates', {
   updatedAt: updatedAt(),
 });
 
+/** Schedules that create tickets automatically (preventive maintenance, checks). */
+export const recurringTickets = pgTable(
+  'recurring_tickets',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    companyId: integer('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    contactId: integer('contact_id').references(() => contacts.id, { onDelete: 'set null' }),
+    configurationItemId: integer('configuration_item_id').references(() => configurationItems.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    queueId: integer('queue_id').references(() => queues.id, { onDelete: 'set null' }),
+    priorityId: integer('priority_id').references(() => ticketPriorities.id, { onDelete: 'set null' }),
+    ticketTypeId: integer('ticket_type_id').references(() => ticketTypes.id, { onDelete: 'set null' }),
+    issueTypeId: integer('issue_type_id').references(() => issueTypes.id, { onDelete: 'set null' }),
+    subIssueTypeId: integer('sub_issue_type_id').references(() => subIssueTypes.id, { onDelete: 'set null' }),
+    assignedUserId: integer('assigned_user_id').references(() => users.id, { onDelete: 'set null' }),
+    estimatedHours: hours('estimated_hours'),
+    /** 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' */
+    frequency: text('frequency').notNull().default('monthly'),
+    interval: integer('interval').notNull().default(1),
+    /** Due date offset after creation, in hours. */
+    dueInHours: integer('due_in_hours'),
+    nextRunAt: timestamp('next_run_at', { withTimezone: true }).notNull(),
+    lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+    lastTicketId: integer('last_ticket_id'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdById: integer('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('recurring_tickets_next_idx').on(t.isActive, t.nextRunAt)],
+);
+
 export const serviceCalls = pgTable(
   'service_calls',
   {

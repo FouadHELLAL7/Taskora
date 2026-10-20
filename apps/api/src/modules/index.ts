@@ -16,6 +16,7 @@ import { schedulingRoutes } from './scheduling/routes.js';
 import { automationRoutes } from './automation/routes.js';
 import { reportRoutes } from './reports/routes.js';
 import { integrationRoutes } from './integrations/routes.js';
+import { recurringRoutes } from './tickets/recurring.js';
 
 export async function registerModules(app: FastifyInstance) {
   await app.register(settingsRoutes);
@@ -35,4 +36,5 @@ export async function registerModules(app: FastifyInstance) {
   await app.register(automationRoutes);
   await app.register(reportRoutes);
   await app.register(integrationRoutes);
+  await app.register(recurringRoutes);
 }

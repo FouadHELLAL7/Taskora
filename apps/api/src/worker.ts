@@ -12,6 +12,7 @@ import { integrations } from './db/schema/index.js';
 import { claimJob, completeJob, enqueue, failJob, recoverStaleJobs, type JobRow } from './jobs/queue.js';
 import { runSlaMonitor } from './jobs/sla-monitor.js';
 import { runStatusAgeRules } from './modules/automation/engine.js';
+import { runRecurringTickets } from './modules/tickets/recurring.js';
 import { runAction1Sync } from './integrations/action1/sync.js';
 import { dispatchNotificationEmails, expireStaleEmails, sendCustomerNote, smtpConfigured } from './jobs/email.js';
 import { imapConfigured, pollInbox } from './jobs/inbound-email.js';
@@ -24,6 +25,7 @@ type Handler = (db: Db, config: Config, job: JobRow) => Promise<unknown>;
 
 const handlers: Record<string, Handler> = {
   'sla.check': (db) => runSlaMonitor(db),
+  'tickets.recurring': (db) => runRecurringTickets(db),
   'workflow.status_age': (db) => runStatusAgeRules(db),
   'action1.sync': (db, cfg, job) =>
     runAction1Sync(db, cfg, {
@@ -46,6 +48,7 @@ const handlers: Record<string, Handler> = {
 async function schedule(db: Db) {
   await enqueue(db, 'sla.check', {}, { dedupeKey: 'sla.check', maxAttempts: 1 });
   await enqueue(db, 'workflow.status_age', {}, { dedupeKey: 'workflow.status_age', maxAttempts: 1 });
+  await enqueue(db, 'tickets.recurring', {}, { dedupeKey: 'tickets.recurring', maxAttempts: 1 });
   if (smtpConfigured(config)) await enqueue(db, 'email.dispatch', {}, { dedupeKey: 'email.dispatch', maxAttempts: 1 });
   if (imapConfigured(config)) await enqueue(db, 'email.inbound', {}, { dedupeKey: 'email.inbound', maxAttempts: 1 });
   const [a1] = await db

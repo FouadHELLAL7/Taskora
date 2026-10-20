@@ -31,6 +31,7 @@ import {
   Milestone,
   Package,
   PhoneCall,
+  Repeat,
   Plug,
   Receipt,
   ScrollText,
@@ -80,6 +81,7 @@ export const NAV: NavSection[] = [
       { label: 'Unassigned Tickets', to: '/tickets/unassigned', icon: Flag, perm: 'tickets.read', badge: 'unassigned' },
       { label: 'Service Calls', to: '/service-calls', icon: PhoneCall, perm: 'tickets.read' },
       { label: 'SLA Monitor', to: '/sla-monitor', icon: Gauge, perm: 'tickets.read', badge: 'breached' },
+      { label: 'Recurring Tickets', to: '/recurring-tickets', icon: Repeat, perm: 'tickets.read' },
     ],
   },
   {

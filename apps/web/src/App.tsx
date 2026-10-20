@@ -22,6 +22,7 @@ const TicketDetail = page(() => import('./pages/tickets/detail'));
 const Queues = page(() => import('./pages/tickets/queues'));
 const ServiceCalls = page(() => import('./pages/tickets/service-calls'));
 const SlaMonitor = page(() => import('./pages/tickets/sla-monitor'));
+const RecurringTickets = page(() => import('./pages/tickets/recurring'));
 const Companies = page(() => import('./pages/crm/companies'));
 const CompanyDetail = page(() => import('./pages/crm/company-detail'));
 const Contacts = page(() => import('./pages/crm/contacts'));
@@ -115,6 +116,7 @@ export function App() {
         {r('/tickets/:id', TicketDetail, 'tickets.read')}
         {r('/service-calls', ServiceCalls, 'tickets.read')}
         {r('/sla-monitor', SlaMonitor, 'tickets.read')}
+        {r('/recurring-tickets', RecurringTickets, 'tickets.read')}
         {r('/companies', Companies, 'companies.read')}
         {r('/companies/:id', CompanyDetail, 'companies.read')}
         {r('/contacts', Contacts, 'companies.read')}
