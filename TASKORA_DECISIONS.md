@@ -20,3 +20,7 @@
 | 16 | 2026-10-20 | Embedded PostgreSQL (`embedded-postgres`) for local dev, PGlite for tests | Development works without Docker; tests run anywhere (incl. CI) without a database service. |
 | 17 | 2026-10-20 | nginx web container with build-time CSP hashes, per-request upstream DNS | Strict CSP without breaking the inline theme script; resilient to API container restarts. |
 | 18 | 2026-10-20 | Licence not chosen yet | Left to the project owner (see TASKORA_NEXT_STEPS.md). |
+| 19 | 2026-10-20 | Logical JSON backups produced by PostgreSQL (`json_agg`) and restored with `json_populate_recordset`, foreign keys dropped/re-created inside one transaction | Exact type round-trip without pg_dump in the app image; works on PostgreSQL and PGlite (tests); restore is all-or-nothing and re-validates every relation; tolerant of backups from older schema versions (missing columns take defaults). |
+| 20 | 2026-10-20 | SMTP settings stored in `system_settings` (`smtp` key, AES-GCM password), precedence over SMTP_* env | Admins can configure mail without shell access; existing env-based installs keep working unchanged. |
+| 21 | 2026-10-20 | Logos stored as base64 in a `logos` table, raster formats only; the browser rescales to 256 px | Included in backups automatically; no SVG (script risk); small payloads. |
+| 22 | 2026-10-20 | Navigation grouped into collapsible sections with sub-menus; compact sidebar uses one flyout per section | ~45 links reduced to 8 section headers; the section of the current page opens automatically. |

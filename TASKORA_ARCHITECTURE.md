@@ -49,6 +49,9 @@
 | scheduling | service calls, calendar feed |
 | reports | dashboard, my work, ticket/time/SLA/asset reports (CSV) |
 | integrations | Action1 settings, sync runs, org mapping, endpoint review, CI device panel |
+| email | SMTP settings (UI, encrypted password, env fallback), test e-mail, compose/send e-mail from a ticket |
+| backup | full logical backups (JSON of every table + uploads, gzip), server storage, scheduled backups, atomic restore |
+| logos | company and organization logos (raster only, magic-byte checked, stored in the database) |
 | attachments, notifications, search | files, in-app notifications, global search |
 
 ## Key domain logic

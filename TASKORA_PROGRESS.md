@@ -43,6 +43,7 @@ All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 - Generated REST API reference `docs/api.md` (287 endpoints with permissions).
 - Production bundles (`dist/server.js`, `dist/worker.js`) smoke-tested with NODE_ENV=production against PostgreSQL.
 - Final verification of session 1: `npm run typecheck` clean, 105 API tests (15 files) + 3 web unit tests passing, `npm run build` succeeds, Playwright E2E 2/2 passing.
+- 0.2.0: Backup & Restore (server-side and downloadable full backups, scheduled backups with retention, atomic restore), SMTP settings in the UI, send e-mail from a ticket, company/organization logos, grouped navigation, Action1 organization mapping fix. Verified: typecheck clean, 120 API tests (17 files) + 3 web tests, build OK; backup → restore → re-login, logo upload, and ticket e-mail to a local SMTP sink checked in the browser.
 
 ## Known gaps
 

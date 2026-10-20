@@ -45,7 +45,8 @@ Important `.env` settings (all documented in `.env.example`):
 | `COOKIE_SECURE` | `auto` (default) / `true` behind HTTPS |
 | `TASKORA_SETUP_TOKEN` | Optional fixed first-run token |
 | `IMAP_HOST`, `IMAP_PORT`, `IMAP_SECURE`, `IMAP_USER`, `IMAP_PASSWORD`, `IMAP_MAILBOX` | Optional inbound e-mail → ticket (fallback company and queue in System Settings) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `PUBLIC_URL` | Optional e-mail notifications through your SMTP relay (links use `PUBLIC_URL`) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `PUBLIC_URL` | Optional e-mail notifications through your SMTP relay (links use `PUBLIC_URL`). Can instead be configured in the UI: Administration → E-mail (UI settings take precedence). |
+| `MAX_RESTORE_MB` | Largest backup file accepted by an uploaded restore (default 512). Restoring a backup kept on the server has no size limit. |
 
 ## 3. First-run setup
 
@@ -116,6 +117,23 @@ Nightly backups with cron (as the user owning the checkout):
 
 Copy `backups/` and your `.env` off the server regularly.
 
+### Backups from the web UI
+
+Administration → System → **Backup & Restore** (permission `backups.manage`, administrators by default):
+
+- **Save backup on the server** writes one compressed file (`taskora-backup-<UTC timestamp>.json.gz`) with every table — tickets, notes, companies, contacts, CIs, contracts, time, invoices, projects, KB, Action1 organizations/endpoints and sync history, settings, users and roles, audit log, logos — plus, optionally, all uploaded files. It is stored in the `taskora-backups` Docker volume (`/app/data/backups`).
+- **Download a backup now** streams the same file to your browser without keeping a copy.
+- **Automatic backups**: the worker saves a backup every *N* hours (default 24) and keeps the last *M* (default 7). Manual backups are never pruned.
+- **Restore** (from the list or from an uploaded file) replaces all data in one transaction — either everything is restored or nothing changes — and saves a *pre-restore* backup first. Everyone is signed out afterwards.
+
+Integration secrets (Action1, SMTP) inside a backup are encrypted with `TASKORA_ENCRYPTION_KEY`; keep that key with your backups. To copy UI backups off the host:
+
+```
+docker run --rm -v taskora_taskora-backups:/b -v "$PWD":/out alpine cp -r /b /out/ui-backups
+```
+
+The `pg_dump` scripts above remain the right tool for disaster recovery of the whole stack; UI backups are portable between Taskora installations of the same or a newer version.
+
 ## 6. Action1
 
 Administration → Integrations → Action1: choose the region, enter an API client ID/secret (Action1 → API credentials), test the connection, map each Action1 organization to a Taskora company, enable the integration and run a sync. The worker then syncs on the configured interval. The integration only reads data from Action1.
@@ -126,3 +144,4 @@ Administration → Integrations → Action1: choose the region, enter an API cli
 - **API unhealthy** – `docker compose logs api`; usually a wrong `DATABASE_URL`/password after changing `.env` for an existing volume (the DB password is fixed at first initialisation).
 - **Cannot log in after enabling HTTPS** – set `COOKIE_SECURE=true` only when users reach Taskora via HTTPS.
 - **Uploads fail** – increase `MAX_UPLOAD_MB` and `NGINX_CLIENT_MAX_BODY_SIZE` together.
+- **Uploading a backup to restore fails with 413** – raise `NGINX_CLIENT_MAX_BODY_SIZE` (and `MAX_RESTORE_MB` if needed), or copy the file into the `taskora-backups` volume and restore it from the list instead.
