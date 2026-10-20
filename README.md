@@ -33,7 +33,12 @@ Open `http://<server>:8080`, enter the setup token and create the first administ
 
 ## Local development (no Docker required)
 
-Requirements: Node.js ≥ 22.
+Requirements: Node.js ≥ 22 (`nvm use` reads `.nvmrc`).
+
+```bash
+git clone -b develop/taskora-platform https://github.com/FouadHELLAL7/Taskora.git taskora
+cd taskora
+```
 
 ```bash
 npm install
