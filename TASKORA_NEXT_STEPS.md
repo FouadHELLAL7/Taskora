@@ -18,6 +18,10 @@ git checkout develop/taskora-platform && npm install && npm run dev
 - Lint/format config (ESLint + Prettier) and pre-commit hook.
 
 ## Priority 3 — features
+- Customer portal (contacts log in, see their tickets and public notes/KB) — needs a separate auth realm.
+- Ticket list column chooser (preference key `ticketColumns` is already accepted by the API).
+- Contract renewal / warranty expiry reminders as notifications.
+- Inventory, quotes and procurement.
 - E-mail: per-queue mailboxes, OAuth2 (Microsoft 365/Google) IMAP authentication, e-mail replies sent from ticket notes.
 - Customer portal; OIDC/Keycloak; inventory/quotes; more integrations.
 

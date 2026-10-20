@@ -36,7 +36,11 @@ All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 - Outbound e-mail notifications (SMTP) with per-user opt-out; customer-visible notes can be e-mailed to the ticket contact.
 - Inbound e-mail → ticket (IMAP) with reply threading on `[TKA-…]`, fallback company, processing log.
 - Recurring tickets (preventive maintenance schedules) with run-now.
-- Playwright E2E tests; web unit tests; 91 API tests.
+- Ticket checklists, dispatch board (technicians × days), session management (list/revoke, admin revoke), configurable login rate limit.
+- CSV data import (companies, contacts, CIs) with preview, matching and Autotask-style headers.
+- Generated REST API reference `docs/api.md` (287 endpoints with permissions).
+- Production bundles (`dist/server.js`, `dist/worker.js`) smoke-tested with NODE_ENV=production against PostgreSQL.
+- Playwright E2E tests; web unit tests; 98 API tests across 14 files.
 
 ## Known gaps
 
