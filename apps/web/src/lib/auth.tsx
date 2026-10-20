@@ -16,6 +16,8 @@ export interface Me {
     isTechnician: boolean;
   };
   csrfToken: string;
+  preferences: Record<string, unknown>;
+  emailEnabled: boolean;
   organization: { name: string; currency: string; timezone: string };
 }
 

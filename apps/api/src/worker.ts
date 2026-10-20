@@ -13,6 +13,7 @@ import { claimJob, completeJob, enqueue, failJob, recoverStaleJobs, type JobRow 
 import { runSlaMonitor } from './jobs/sla-monitor.js';
 import { runStatusAgeRules } from './modules/automation/engine.js';
 import { runAction1Sync } from './integrations/action1/sync.js';
+import { dispatchNotificationEmails, expireStaleEmails, smtpConfigured } from './jobs/email.js';
 
 const config = loadConfig();
 const log = pino({ level: config.LOG_LEVEL, base: { svc: 'worker' } });
@@ -28,7 +29,9 @@ const handlers: Record<string, Handler> = {
       trigger: (job.payload.trigger as 'manual' | 'scheduled') ?? 'scheduled',
       userId: (job.payload.userId as number | null) ?? null,
     }),
+  'email.dispatch': (db, cfg) => dispatchNotificationEmails(db, cfg),
   'maintenance.cleanup': async (db) => {
+    await expireStaleEmails(db);
     await db.execute(sql`delete from sessions where expires_at < now()`);
     await db.execute(sql`delete from notifications where read_at is not null and read_at < now() - interval '90 days'`);
     await db.execute(sql`delete from jobs where status in ('done','failed') and coalesce(finished_at, created_at) < now() - interval '14 days'`);
@@ -40,6 +43,7 @@ const handlers: Record<string, Handler> = {
 async function schedule(db: Db) {
   await enqueue(db, 'sla.check', {}, { dedupeKey: 'sla.check', maxAttempts: 1 });
   await enqueue(db, 'workflow.status_age', {}, { dedupeKey: 'workflow.status_age', maxAttempts: 1 });
+  if (smtpConfigured(config)) await enqueue(db, 'email.dispatch', {}, { dedupeKey: 'email.dispatch', maxAttempts: 1 });
   const [a1] = await db
     .select()
     .from(integrations)

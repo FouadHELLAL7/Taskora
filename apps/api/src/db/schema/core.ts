@@ -143,9 +143,12 @@ export const notifications = pgTable(
     entityType: text('entity_type'),
     entityId: integer('entity_id'),
     readAt: timestamp('read_at', { withTimezone: true }),
+    /** E-mail delivery: null = pending (or SMTP disabled), then 'sent' / 'skipped' / 'failed'. */
+    emailStatus: text('email_status'),
+    emailedAt: timestamp('emailed_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
-  (t) => [index('notifications_user_idx').on(t.userId, t.readAt)],
+  (t) => [index('notifications_user_idx').on(t.userId, t.readAt), index('notifications_email_idx').on(t.emailStatus, t.createdAt)],
 );
 
 export const savedViews = pgTable('saved_views', {

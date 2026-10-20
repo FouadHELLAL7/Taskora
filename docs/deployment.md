@@ -44,6 +44,7 @@ Important `.env` settings (all documented in `.env.example`):
 | `TASKORA_BIND_ADDRESS` / `TASKORA_HTTP_PORT` | Where the UI listens (default `0.0.0.0:8080` = LAN). Use `127.0.0.1` behind a reverse proxy on the same host. |
 | `COOKIE_SECURE` | `auto` (default) / `true` behind HTTPS |
 | `TASKORA_SETUP_TOKEN` | Optional fixed first-run token |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `PUBLIC_URL` | Optional e-mail notifications through your SMTP relay (links use `PUBLIC_URL`) |
 
 ## 3. First-run setup
 

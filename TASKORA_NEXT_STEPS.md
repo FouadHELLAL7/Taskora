@@ -18,7 +18,7 @@ git checkout develop/taskora-platform && npm install && npm run dev
 - Lint/format config (ESLint + Prettier) and pre-commit hook.
 
 ## Priority 3 — features
-- SMTP notifications (templates already exist) and inbound e-mail → ticket.
+- Inbound e-mail → ticket (outbound SMTP notifications are done).
 - Customer portal; OIDC/Keycloak; inventory/quotes; more integrations.
 
 ## Decisions needed from the project owner

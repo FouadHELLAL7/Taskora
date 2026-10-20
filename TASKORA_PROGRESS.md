@@ -32,6 +32,5 @@ All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 
 ## Known gaps
 
-- No SMTP e-mail delivery yet (in-app notifications only).
 - No Playwright end-to-end tests yet.
 - Ticket service ignores a backdated `ctx.now` for events/notifications (only relevant to the demo seed, which corrects timestamps itself).

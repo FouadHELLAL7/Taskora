@@ -26,6 +26,15 @@ const envSchema = z.object({
   /** Allows overriding Action1 base URLs (tests / proxies). */
   ACTION1_BASE_URL_OVERRIDE: z.string().url().optional(),
   WORKER_POLL_MS: z.coerce.number().int().min(200).default(2000),
+  /** Public base URL used in e-mail links, e.g. https://psa.example.com */
+  PUBLIC_URL: z.string().url().optional(),
+  /** Optional SMTP relay for e-mail notifications (in-app notifications always work). */
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().default(587),
+  SMTP_SECURE: bool(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 });
 
 export type Config = z.infer<typeof envSchema> & { encryptionKey: Buffer };

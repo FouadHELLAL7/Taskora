@@ -121,8 +121,11 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/auth/me', async (req) => {
     const user = currentUser(req);
     const settings = await getSystemSettings(app.db);
+    const [prefs] = await app.db.select({ preferences: users.preferences }).from(users).where(eq(users.id, user.id));
     return {
       user,
+      preferences: prefs?.preferences ?? {},
+      emailEnabled: !!(app.config.SMTP_HOST && app.config.SMTP_FROM),
       csrfToken: req.csrfToken,
       organization: { name: settings.organizationName, currency: settings.currency, timezone: settings.timezone },
     };
@@ -146,7 +149,7 @@ export async function authRoutes(app: FastifyInstance) {
     const me = currentUser(req);
     const body = (req.body ?? {}) as Record<string, unknown>;
     const allowed: Record<string, unknown> = {};
-    for (const key of ['theme', 'sidebarCollapsed', 'ticketColumns', 'defaultTicketView']) {
+    for (const key of ['theme', 'sidebarCollapsed', 'ticketColumns', 'defaultTicketView', 'emailNotifications']) {
       if (key in body) allowed[key] = body[key];
     }
     if (typeof body.timezone === 'string' && body.timezone.length < 64) {

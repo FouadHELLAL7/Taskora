@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronsLeft, ChevronsRight, LogOut, Moon, Plus, Search, Sun, Monitor, KeyRound, Keyboard } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, LogOut, Mail, Moon, Plus, Search, Sun, Monitor, KeyRound, Keyboard } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth, useMe } from '@/lib/auth';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ function readCollapsed() {
 
 export function AppShell() {
   const me = useMe();
-  const { can, logout } = useAuth();
+  const { can, logout, refresh } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
@@ -167,6 +167,16 @@ export function AppShell() {
                 <DropdownItem onSelect={() => setShortcutsOpen(true)}>
                   <Keyboard /> Keyboard shortcuts
                 </DropdownItem>
+                {me.emailEnabled && (
+                  <DropdownItem
+                    onSelect={async () => {
+                      await api.patch('/auth/preferences', { emailNotifications: me.preferences.emailNotifications === false });
+                      await refresh();
+                    }}
+                  >
+                    <Mail /> E-mail notifications: {me.preferences.emailNotifications === false ? 'off' : 'on'}
+                  </DropdownItem>
+                )}
                 <DropdownItem onSelect={() => setPwOpen(true)}>
                   <KeyRound /> Change password
                 </DropdownItem>
