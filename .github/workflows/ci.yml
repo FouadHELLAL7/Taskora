@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'develop/**']
+  pull_request:
+    branches: [main, develop, 'develop/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        # API tests use in-process PGlite; no database service is needed.
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  config:
+    name: Compose config and shell scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shellcheck
+        run: shellcheck --severity=warning -x scripts/*.sh deploy/docker-entrypoint.sh
+
+      - name: Scripts use LF line endings
+        run: |
+          if grep -lU $'\r' scripts/*.sh deploy/docker-entrypoint.sh deploy/nginx/* Dockerfile docker-compose.yml .env.example; then
+            echo "::error::CRLF line endings found in the files listed above"
+            exit 1
+          fi
+
+      - name: Compose refuses to start without secrets
+        run: |
+          cp .env.example .env
+          if docker compose config -q 2>err.txt; then
+            echo "::error::docker compose config succeeded although the required secrets are empty"
+            exit 1
+          fi
+          cat err.txt
+          grep -q 'POSTGRES_PASSWORD\|TASKORA_ENCRYPTION_KEY' err.txt
+
+      - name: Compose config is valid with a dummy .env
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 32)/" \
+            -e "s/^TASKORA_ENCRYPTION_KEY=.*/TASKORA_ENCRYPTION_KEY=$(openssl rand -hex 32)/" \
+            .env
+          docker compose config -q
+          docker compose config --format json > config.json
+          # The database must never be published to the host.
+          test "$(jq '.services.postgres.ports // [] | length' config.json)" = 0
+          # The web UI is the only published port.
+          test "$(jq '[.services[] | select(.ports) | .ports[]] | length' config.json)" = 1
+
+  docker:
+    name: Docker images and smoke test
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: api
+          push: false
+          load: true
+          tags: taskora-api:ci
+          build-args: TASKORA_VERSION=${{ github.sha }}
+          cache-from: type=gha,scope=taskora-api
+          cache-to: type=gha,mode=max,scope=taskora-api
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: web
+          push: false
+          load: true
+          tags: taskora-web:ci
+          build-args: TASKORA_VERSION=${{ github.sha }}
+          cache-from: type=gha,scope=taskora-web
+          cache-to: type=gha,mode=max,scope=taskora-web
+
+      - name: Image sizes
+        run: docker image ls 'taskora-*'
+
+      - name: embedded-postgres is not in the api image
+        run: |
+          if docker run --rm --entrypoint sh taskora-api:ci -c 'ls /app/node_modules | grep -E "embedded-postgres|vite|react$|typescript"'; then
+            echo "::error::development packages found in the api image"
+            exit 1
+          fi
+
+      - name: Start the stack
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 32)/" \
+            -e "s/^TASKORA_ENCRYPTION_KEY=.*/TASKORA_ENCRYPTION_KEY=$(openssl rand -hex 32)/" \
+            .env
+          # Use the images built above instead of building again.
+          echo "TASKORA_IMAGE_TAG=ci" >> .env
+          docker compose up -d --no-build --wait --wait-timeout 240
+          docker compose ps
+
+      - name: Smoke test
+        run: |
+          set -x
+          base=http://127.0.0.1:8080
+          curl -fsS "$base/nginx-health"
+          health="$(curl -fsS "$base/api/health")"
+          grep -q '"status":"ok"' <<<"$health"
+
+          # SPA entry document, security headers, client-side routing fallback
+          index="$(curl -fsS -D headers.txt "$base/")"
+          grep -q '<div id="root">' <<<"$index"
+          grep -qi '^content-security-policy:.*sha256-' headers.txt
+          grep -qi '^x-frame-options: DENY' headers.txt
+          grep -qi '^cache-control: no-cache' headers.txt
+          route="$(curl -fsS "$base/some/client/route")"
+          grep -q '<div id="root">' <<<"$route"
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$base/assets/does-not-exist.js")" = 404
+
+          # /api/ is proxied to the API (JSON), not answered by the SPA fallback
+          code="$(curl -s -o api404.json -w '%{http_code}' "$base/api/v1/does-not-exist")"
+          [[ "$code" = 401 || "$code" = 404 ]]
+          grep -q '"error"' api404.json
+          setup="$(curl -fsS "$base/api/v1/setup/status")"
+          grep -q '"needsSetup":true' <<<"$setup"
+
+          # Postgres must not be published on the host
+          if docker compose port postgres 5432; then
+            echo "::error::postgres is published on the host"
+            exit 1
+          fi
+
+          # The first-run setup token is logged
+          logs="$(docker compose logs --no-color api)"
+          grep -q 'Initial setup token: ' <<<"$logs"
+
+          # CLI entry points
+          docker compose exec -T api node dist/db/migrate-cli.js
+          rc=0
+          docker compose exec -T api node dist/cli/reset-password.js nobody@example.com || rc=$?
+          test "$rc" = 1
+
+      - name: Operations scripts
+        run: |
+          bash scripts/healthcheck.sh
+          bash scripts/backup.sh
+          backup="$(ls -d backups/2* | tail -n 1)"
+          ls -l "$backup"
+          (cd "$backup" && sha256sum -c SHA256SUMS)
+          bash scripts/restore.sh "$backup" --yes
+          ls backups/pre-restore
+          bash scripts/healthcheck.sh
+          curl -fsS http://127.0.0.1:8080/api/health
+
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker compose ps -a || true
+          docker compose logs --no-color --tail 200 || true
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v --remove-orphans || true

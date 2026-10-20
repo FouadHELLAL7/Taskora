@@ -54,7 +54,7 @@ export function ticketFilters(req: FastifyRequest, q: Record<string, unknown>): 
   const cat = q.statusCategory ? String(q.statusCategory) : undefined;
   if (cat === 'open') conds.push(sql`${s.ticketStatuses.category} not in ('resolved','closed')`);
   else if (cat === 'done') conds.push(sql`${s.ticketStatuses.category} in ('resolved','closed')`);
-  else if (cat) conds.push(inArray(s.ticketStatuses.category, cat.split(',')));
+  else if (cat && cat !== 'all') conds.push(inArray(s.ticketStatuses.category, cat.split(',')));
   const pr = idList(q.priorityIds);
   if (pr.length) conds.push(inArray(s.tickets.priorityId, pr));
   const qu = idList(q.queueIds);

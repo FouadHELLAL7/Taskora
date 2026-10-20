@@ -1,0 +1,41 @@
+# Keep the build context small and free of secrets / host artefacts.
+# The Dockerfile copies package manifests first (for layer caching) and
+# then the sources it needs; everything else listed here is never sent.
+
+.git
+.github
+.gitignore
+.gitattributes
+.editorconfig
+.vscode
+.idea
+.claude
+.DS_Store
+*.log
+
+# Secrets and local data — never bake these into an image.
+.env
+.env.*
+!.env.example
+.data
+backups
+uploads
+
+# Dependencies and build output are produced inside the image.
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/*.tsbuildinfo
+**/.vite
+playwright-report
+test-results
+
+# Not needed to build the images.
+docs
+README.md
+docker-compose*.yml
+compose*.yml
+Dockerfile*
+.dockerignore
+scripts

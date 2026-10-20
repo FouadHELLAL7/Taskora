@@ -1,0 +1,160 @@
+# Taskora - production stack for a single Docker host.
+#
+#   cp .env.example .env      # then set the secrets (or run: bash scripts/install.sh)
+#   docker compose up -d --build
+#
+# Services
+#   postgres  PostgreSQL 17. Never published to the host; reachable only by
+#             api/worker on the internal `db` network.
+#   api       Fastify API. Applies database migrations and the base seed on
+#             start-up, then serves /api on port 3000 (internal only).
+#   worker    Background jobs (SLA monitor, automation, Action1 sync). Same
+#             image as api; started once api is healthy (migrations applied).
+#   web       nginx serving the SPA and proxying /api/ to api. The only
+#             published port: ${TASKORA_BIND_ADDRESS}:${TASKORA_HTTP_PORT}.
+#
+# See docs/deployment.md for the full guide.
+
+name: taskora
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# Settings shared by api and worker. Values come from .env (see .env.example).
+# Everything in .env is also passed through `env_file`, which is how optional
+# settings such as TASKORA_SETUP_TOKEN reach the API; the explicit values
+# below take precedence (and NODE_ENV, DATABASE_URL and UPLOAD_DIR are fixed
+# for this container layout).
+x-app-environment: &app-environment
+  NODE_ENV: production
+  DATABASE_URL: "postgres://${POSTGRES_USER:-taskora}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set - copy .env.example to .env and set it (openssl rand -hex 32)}@postgres:5432/${POSTGRES_DB:-taskora}"
+  DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+  TASKORA_ENCRYPTION_KEY: ${TASKORA_ENCRYPTION_KEY:?TASKORA_ENCRYPTION_KEY is not set - generate one with openssl rand -hex 32 and put it in .env}
+  SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+  COOKIE_SECURE: ${COOKIE_SECURE:-auto}
+  TRUST_PROXY: ${TRUST_PROXY:-true}
+  UPLOAD_DIR: /app/data/uploads
+  MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  WORKER_POLL_MS: ${WORKER_POLL_MS:-2000}
+
+x-app-service: &app-service
+  build:
+    context: .
+    target: api
+    args:
+      TASKORA_VERSION: ${TASKORA_VERSION:-dev}
+  image: taskora-api:${TASKORA_IMAGE_TAG:-local}
+  restart: unless-stopped
+  env_file: .env
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  volumes:
+    - taskora-uploads:/app/data/uploads
+  networks:
+    - db
+    - app
+  logging: *logging
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-taskora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set - copy .env.example to .env and set it (openssl rand -hex 32)}
+      POSTGRES_DB: ${POSTGRES_DB:-taskora}
+    volumes:
+      - taskora-db:/var/lib/postgresql/data
+    # No `ports:` on purpose - the database is never exposed outside Docker.
+    networks:
+      - db
+    shm_size: 256mb
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *logging
+
+  api:
+    <<: *app-service
+    environment:
+      <<: *app-environment
+      HOST: 0.0.0.0
+      PORT: "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    stop_grace_period: 30s
+
+  worker:
+    <<: *app-service
+    command: ["node", "dist/worker.js"]
+    environment:
+      <<: *app-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # The API applies migrations on start; wait until it is healthy.
+      api:
+        condition: service_healthy
+    # The worker has no HTTP port; tini exits (and Docker restarts the
+    # container) if the worker process dies, so no healthcheck is needed.
+    healthcheck:
+      disable: true
+    stop_grace_period: 20s
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        TASKORA_VERSION: ${TASKORA_VERSION:-dev}
+    image: taskora-web:${TASKORA_IMAGE_TAG:-local}
+    restart: unless-stopped
+    environment:
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-30m}
+      NGINX_REAL_IP_FROM: ${TASKORA_TRUSTED_PROXY:-127.0.0.1/32}
+      NGINX_API_UPSTREAM: api:3000
+    ports:
+      - "${TASKORA_BIND_ADDRESS:-0.0.0.0}:${TASKORA_HTTP_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - app
+    logging: *logging
+
+networks:
+  # Internal: no route to the outside world. Only postgres, api and worker.
+  db:
+    internal: true
+  # api/worker egress (e.g. Action1) and web -> api.
+  app: {}
+
+volumes:
+  taskora-db:
+  taskora-uploads:

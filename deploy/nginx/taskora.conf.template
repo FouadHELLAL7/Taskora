@@ -1,0 +1,102 @@
+# Taskora site: serves the SPA and reverse-proxies /api/ to the API container.
+#
+# This is a template: at container start the official nginx entrypoint
+# substitutes the ${NGINX_*} variables below (see NGINX_ENVSUBST_FILTER in the
+# Dockerfile) and writes the result to /etc/nginx/conf.d/taskora.conf.
+#   NGINX_CLIENT_MAX_BODY_SIZE  max request body (uploads), e.g. 30m
+#   NGINX_REAL_IP_FROM          CIDR of a trusted reverse proxy in front of
+#                               this container (X-Forwarded-For is only
+#                               honoured from there), e.g. 172.16.0.0/12
+#   NGINX_API_UPSTREAM          host:port of the API service, e.g. api:3000
+# nginx's own $variables are left untouched by the entrypoint.
+
+# Preserve the original scheme when an outer TLS proxy sets X-Forwarded-Proto;
+# otherwise report the scheme of this hop. The API uses it for COOKIE_SECURE=auto.
+map $http_x_forwarded_proto $taskora_forwarded_proto {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+
+server {
+    listen 8080 default_server;
+    server_name _;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size ${NGINX_CLIENT_MAX_BODY_SIZE};
+    client_body_timeout  120s;
+
+    # Real client address when running behind a trusted reverse proxy.
+    set_real_ip_from  ${NGINX_REAL_IP_FROM};
+    real_ip_header    X-Forwarded-For;
+    real_ip_recursive on;
+
+    # Docker's embedded DNS. Resolving the upstream per request (through a
+    # variable) keeps nginx working when the api container is recreated with a
+    # new IP address, and lets nginx start even if api is briefly unavailable.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+    set $taskora_api http://${NGINX_API_UPSTREAM};
+
+    include /etc/nginx/snippets/security-headers.conf;
+
+    # Liveness of the web container itself (used by the Docker healthcheck).
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # ---------------------------------------------------------------- API ----
+    location ^~ /api/ {
+        # No URI part in proxy_pass: the original request URI is passed on.
+        proxy_pass $taskora_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection        "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        # $remote_addr is already the real client (see set_real_ip_from), so
+        # the API receives exactly one, trustworthy address.
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $taskora_forwarded_proto;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    300s;
+        proxy_read_timeout    300s;
+        # Stream downloads (attachments, PDFs) instead of spooling to disk.
+        proxy_buffering off;
+
+        # The API sets its own security headers (helmet, attachment CSP); this
+        # add_header also stops the SPA headers above from being inherited.
+        add_header X-Robots-Tag "noindex, nofollow" always;
+    }
+
+    # ---------------------------------------------------------------- SPA ----
+    # Vite emits content-hashed file names under /assets/: cache forever.
+    location ^~ /assets/ {
+        try_files $uri =404;
+        access_log off;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+
+    # The entry document must always be revalidated so deployments take effect.
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+
+    # Never serve dotfiles.
+    location ~ /\. {
+        return 404;
+    }
+
+    # Client-side routing: unknown paths fall back to the SPA entry document.
+    location / {
+        try_files $uri /index.html;
+        add_header Cache-Control "public, max-age=3600" always;
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+}

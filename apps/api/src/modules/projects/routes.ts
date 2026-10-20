@@ -141,6 +141,54 @@ export async function projectRoutes(app: FastifyInstance) {
 
   /* ---- milestones ---- */
 
+  /** Milestones across projects (upcoming / overdue overview) with task progress. */
+  app.get('/project-milestones', { config: { perm: 'projects.read' } }, async (req) => {
+    const q = parseList(req.query);
+    const status = q.status === 'complete' || q.status === 'all' ? String(q.status) : 'open';
+    const where = whereAll(
+      status === 'open' ? eq(s.projectMilestones.isComplete, false) : undefined,
+      status === 'complete' ? eq(s.projectMilestones.isComplete, true) : undefined,
+      intParam(q.projectId) ? eq(s.projectMilestones.projectId, intParam(q.projectId)!) : undefined,
+      intParam(q.companyId) ? eq(s.projects.companyId, intParam(q.companyId)!) : undefined,
+      q.overdue === 'true' ? sql`${s.projectMilestones.dueDate} < current_date and ${s.projectMilestones.isComplete} = false` : undefined,
+      searchAny(q.q, [s.projectMilestones.name, s.projects.name, s.projects.projectNumber, s.companies.name]),
+    );
+    const sortable = { dueDate: s.projectMilestones.dueDate, name: s.projectMilestones.name, project: s.projects.name, company: s.companies.name };
+    const sortCol = q.sort && q.sort in sortable ? sortable[q.sort as keyof typeof sortable] : s.projectMilestones.dueDate;
+    const dir = q.sort && q.sort in sortable ? q.order : 'asc';
+    const rows = await app.db
+      .select({
+        id: s.projectMilestones.id,
+        projectId: s.projectMilestones.projectId,
+        name: s.projectMilestones.name,
+        description: s.projectMilestones.description,
+        dueDate: s.projectMilestones.dueDate,
+        isComplete: s.projectMilestones.isComplete,
+        completedAt: s.projectMilestones.completedAt,
+        projectName: s.projects.name,
+        projectNumber: s.projects.projectNumber,
+        projectStatus: s.projects.status,
+        companyId: s.projects.companyId,
+        companyName: s.companies.name,
+        taskCount: sql<number>`(select count(*)::int from project_tasks pt where pt.milestone_id = ${s.projectMilestones.id})`,
+        doneTaskCount: sql<number>`(select count(*)::int from project_tasks pt where pt.milestone_id = ${s.projectMilestones.id} and pt.status = 'done')`,
+      })
+      .from(s.projectMilestones)
+      .innerJoin(s.projects, eq(s.projects.id, s.projectMilestones.projectId))
+      .innerJoin(s.companies, eq(s.companies.id, s.projects.companyId))
+      .where(where)
+      .orderBy(sql`${sortCol} ${dir === 'desc' ? sql`desc` : sql`asc`} nulls last`, asc(s.projectMilestones.id))
+      .limit(q.pageSize)
+      .offset((q.page - 1) * q.pageSize);
+    const [{ n }] = (await app.db
+      .select({ n: countAll })
+      .from(s.projectMilestones)
+      .innerJoin(s.projects, eq(s.projects.id, s.projectMilestones.projectId))
+      .innerJoin(s.companies, eq(s.companies.id, s.projects.companyId))
+      .where(where)) as [{ n: number }];
+    return paginated(rows, n, q);
+  });
+
   app.post('/projects/:id/milestones', { config: { perm: 'projects.write' } }, async (req, reply) => {
     const input = milestoneSchema.parse(req.body);
     const [row] = await app.db
