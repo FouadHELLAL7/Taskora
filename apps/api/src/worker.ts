@@ -13,6 +13,7 @@ import { claimJob, completeJob, enqueue, failJob, recoverStaleJobs, type JobRow 
 import { runSlaMonitor } from './jobs/sla-monitor.js';
 import { runStatusAgeRules } from './modules/automation/engine.js';
 import { runRecurringTickets } from './modules/tickets/recurring.js';
+import { runBusinessReminders } from './jobs/reminders.js';
 import { runAction1Sync } from './integrations/action1/sync.js';
 import { dispatchNotificationEmails, expireStaleEmails, sendCustomerNote, smtpConfigured } from './jobs/email.js';
 import { imapConfigured, pollInbox } from './jobs/inbound-email.js';
@@ -26,6 +27,7 @@ type Handler = (db: Db, config: Config, job: JobRow) => Promise<unknown>;
 const handlers: Record<string, Handler> = {
   'sla.check': (db) => runSlaMonitor(db),
   'tickets.recurring': (db) => runRecurringTickets(db),
+  'reminders.daily': (db) => runBusinessReminders(db),
   'workflow.status_age': (db) => runStatusAgeRules(db),
   'action1.sync': (db, cfg, job) =>
     runAction1Sync(db, cfg, {
@@ -86,6 +88,7 @@ async function main() {
       if (now - lastCleanup >= 24 * 3600_000) {
         lastCleanup = now;
         await enqueue(db, 'maintenance.cleanup', {}, { dedupeKey: 'maintenance.cleanup', maxAttempts: 1 });
+        await enqueue(db, 'reminders.daily', {}, { dedupeKey: 'reminders.daily', maxAttempts: 1 });
       }
       const job = await claimJob(db, workerId);
       if (!job) {
