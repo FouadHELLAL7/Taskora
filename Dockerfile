@@ -79,10 +79,12 @@ COPY apps/web/package.json apps/web/
 # prebuilt binaries as optional platform packages).
 # Afterwards drop what the bundle never loads at runtime: PGlite (tests only,
 # kept by npm as an optional peer of drizzle-orm), type declarations and the
-# workspace links (@taskora/shared is bundled into dist/).
+# workspace links (@taskora/shared is bundled into dist/), plus the empty scope
+# folders npm 10 leaves for omitted dev packages (e.g. node_modules/@vitest).
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     npm ci --omit=dev --ignore-scripts --workspace=@taskora/api --include-workspace-root=false \
  && rm -rf node_modules/@electric-sql node_modules/@types node_modules/@taskora \
+ && find node_modules -mindepth 1 -maxdepth 1 -type d -empty -delete \
  && mkdir -p apps/api/node_modules
 
 # --------------------------------------------------------------------------
