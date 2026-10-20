@@ -1,0 +1,35 @@
+{
+  "name": "taskora",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Taskora — self-hosted Professional Services Automation (PSA) for MSPs and IT service providers",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:db": "node scripts/dev-db.mjs",
+    "dev:api": "npm run dev -w @taskora/api",
+    "dev:web": "npm run dev -w @taskora/web",
+    "build": "npm run build -w @taskora/api && npm run build -w @taskora/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run db:generate -w @taskora/api",
+    "db:migrate": "npm run db:migrate -w @taskora/api",
+    "db:seed:demo": "npm run db:seed:demo -w @taskora/api"
+  },
+  "devDependencies": {
+    "embedded-postgres": "18.4.0-beta.17"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "@embedded-postgres/windows-x64@18.4.0-beta.17": true
+  }
+}

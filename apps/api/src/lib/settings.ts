@@ -1,0 +1,42 @@
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import type { Tx } from '../db/client.js';
+import { systemSettings } from '../db/schema/index.js';
+
+export const systemSettingsSchema = z.object({
+  organizationName: z.string().trim().min(1).max(120).default('Taskora'),
+  timezone: z.string().min(1).max(64).default('UTC'),
+  currency: z.string().length(3).default('EUR'),
+  ticketPrefix: z.string().trim().max(10).default('TKA-'),
+  ciPrefix: z.string().trim().max(10).default('CI-'),
+  contractPrefix: z.string().trim().max(10).default('CTR-'),
+  projectPrefix: z.string().trim().max(10).default('PRJ-'),
+  invoicePrefix: z.string().trim().max(10).default('INV-'),
+  kbPrefix: z.string().trim().max(10).default('KB-'),
+  defaultWorkTypeId: z.number().int().positive().nullable().default(null),
+  /** Minutes before an SLA deadline when the ticket is flagged "at risk". */
+  slaWarningMinutes: z.coerce.number().int().min(5).max(1440).default(60),
+  /** Time-entry rounding increment in minutes (1 = none). */
+  timeRoundingMinutes: z.coerce.number().int().min(1).max(60).default(1),
+  requireTimeApproval: z.boolean().default(false),
+  invoicePaymentTermsDays: z.coerce.number().int().min(0).max(365).default(30),
+  invoiceFooter: z.string().max(2000).default(''),
+  companyAddress: z.string().max(1000).default(''),
+});
+export type SystemSettings = z.infer<typeof systemSettingsSchema>;
+
+const KEY = 'system';
+
+export async function getSystemSettings(db: Tx): Promise<SystemSettings> {
+  const [row] = await db.select().from(systemSettings).where(eq(systemSettings.key, KEY));
+  return systemSettingsSchema.parse(row?.value ?? {});
+}
+
+export async function saveSystemSettings(db: Tx, patch: Partial<SystemSettings>): Promise<SystemSettings> {
+  const merged = systemSettingsSchema.parse({ ...(await getSystemSettings(db)), ...patch });
+  await db
+    .insert(systemSettings)
+    .values({ key: KEY, value: merged })
+    .onConflictDoUpdate({ target: systemSettings.key, set: { value: merged } });
+  return merged;
+}
