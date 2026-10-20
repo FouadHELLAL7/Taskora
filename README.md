@@ -15,6 +15,7 @@
 - **Projects** – projects, milestones, tasks, progress from logged time.
 - **Knowledge** – knowledge base and company documentation (Markdown), linked to tickets.
 - **Automation** – workflow rules (on create/update/status age/SLA breach) with conditions, actions, execution history and loop prevention.
+- **Customer portal** – contacts sign in at `/portal` (separate authentication realm) to follow their tickets, raise requests, reply and read public KB articles; primary contacts see all company tickets. Internal notes and staff data are never exposed.
 - **E-mail** – optional SMTP notifications and IMAP inbound e-mail → ticket with reply threading on `[TKA-…]` subjects.
 - **Platform** – role-based access control enforced in the API, audit log, custom fields, notifications, global search (Ctrl+K), keyboard shortcuts, light/dark themes, background worker with a Postgres job queue.
 

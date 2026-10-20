@@ -14,11 +14,14 @@ import { ContactFormDialog, type ContactRecord } from '@/components/forms/contac
 import { CustomFieldsView } from '@/components/custom-fields';
 import { RelatedCis, RelatedTickets } from '@/components/related-tables';
 import { handleFormError } from '@/components/form';
+import { PortalAccessCard } from '@/components/forms/portal-access';
 
 interface ContactDetail extends ContactRecord {
   companyName: string;
   companyPhone: string | null;
   locationName: string | null;
+  portalEnabled: boolean;
+  portalLastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +81,7 @@ export default function ContactDetailPage() {
         }
       />
       <div className="grid gap-4 p-5 xl:grid-cols-[320px_1fr]">
+        <div className="space-y-4">
         <Card className="h-fit">
           <CardHeader title="Contact information" />
           <CardBody className="space-y-2.5 text-[13px]">
@@ -112,6 +116,8 @@ export default function ContactDetailPage() {
             {c.notes && <p className="prose-note border-t border-border pt-3 text-xs text-muted">{c.notes}</p>}
           </CardBody>
         </Card>
+        <PortalAccessCard contact={c} canWrite={can('companies.write')} />
+        </div>
         <Card>
           <Tabs defaultValue="tickets">
             <div className="px-2">

@@ -10,6 +10,7 @@ import { errorHandler } from './lib/errors.js';
 import { registerAuthHook } from './modules/auth/session.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { registerModules } from './modules/index.js';
+import { portalRoutes } from './modules/portal/routes.js';
 
 export interface BuildOptions {
   db: Db;
@@ -75,6 +76,7 @@ export async function buildApp({ db, config, logger }: BuildOptions): Promise<Fa
     },
     { prefix: '/api/v1' },
   );
+  await app.register(portalRoutes);
 
   return app;
 }

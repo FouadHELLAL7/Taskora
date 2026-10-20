@@ -80,6 +80,10 @@ export const contacts = pgTable(
     isPrimary: boolean('is_primary').notNull().default(false),
     notes: text('notes'),
     customFields: customFields(),
+    /** Customer portal access (separate authentication realm from staff users). */
+    portalEnabled: boolean('portal_enabled').notNull().default(false),
+    portalPasswordHash: text('portal_password_hash'),
+    portalLastLoginAt: timestamp('portal_last_login_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -88,6 +92,17 @@ export const contacts = pgTable(
     index('contacts_email_idx').on(sql`lower(${t.email})`),
   ],
 );
+
+/** Customer portal sessions (hashed tokens), kept apart from staff sessions. */
+export const portalSessions = pgTable('portal_sessions', {
+  id: text('id').primaryKey(),
+  contactId: integer('contact_id')
+    .notNull()
+    .references(() => contacts.id, { onDelete: 'cascade' }),
+  csrfToken: text('csrf_token').notNull(),
+  createdAt: createdAt(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
 
 /** Notes, calls, emails and meetings logged against a company (and optionally a contact). */
 export const activities = pgTable(

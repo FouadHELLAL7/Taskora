@@ -36,6 +36,13 @@
       "when": 1792502817351,
       "tag": "0004_ticket_checklists",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792503665009,
+      "tag": "0005_customer_portal",
+      "breakpoints": true
     }
   ]
 }

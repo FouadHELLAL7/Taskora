@@ -19,6 +19,7 @@ import { integrationRoutes } from './integrations/routes.js';
 import { recurringRoutes } from './tickets/recurring.js';
 import { checklistRoutes } from './tickets/checklist.js';
 import { importRoutes } from './imports/routes.js';
+import { portalAdminRoutes } from './portal/routes.js';
 
 export async function registerModules(app: FastifyInstance) {
   await app.register(settingsRoutes);
@@ -41,4 +42,5 @@ export async function registerModules(app: FastifyInstance) {
   await app.register(recurringRoutes);
   await app.register(checklistRoutes);
   await app.register(importRoutes);
+  await app.register(portalAdminRoutes);
 }

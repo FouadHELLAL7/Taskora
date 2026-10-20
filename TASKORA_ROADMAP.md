@@ -35,7 +35,7 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned
 
 ## Later
 - ⬜ E-mail (SMTP) notifications and inbound e-mail to ticket
-- ⬜ Customer portal (separate auth realm, public notes/KB only)
+- ✅ Customer portal MVP (separate auth realm, public notes/KB only)
 - ⬜ OIDC / Keycloak SSO
 - ⬜ Inventory & procurement, quotes
 - ⬜ Additional RMM integrations, webhooks, public API tokens

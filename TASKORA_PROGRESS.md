@@ -37,6 +37,7 @@ All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 - Inbound e-mail → ticket (IMAP) with reply threading on `[TKA-…]`, fallback company, processing log.
 - Recurring tickets (preventive maintenance schedules) with run-now.
 - Ticket checklists, dispatch board (technicians × days), session management (list/revoke, admin revoke), configurable login rate limit.
+- Customer portal MVP (`/portal`, separate session realm and CSRF, contact-scoped tickets, replies, new requests, public KB) with security tests.
 - CSV data import (companies, contacts, CIs) with preview, matching and Autotask-style headers.
 - Generated REST API reference `docs/api.md` (287 endpoints with permissions).
 - Production bundles (`dist/server.js`, `dist/worker.js`) smoke-tested with NODE_ENV=production against PostgreSQL.

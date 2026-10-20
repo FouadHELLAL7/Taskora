@@ -324,7 +324,7 @@ export async function crmRoutes(app: FastifyInstance) {
       .leftJoin(s.locations, eq(s.locations.id, s.contacts.locationId))
       .where(eq(s.contacts.id, id));
     if (!row) throw notFound('Contact');
-    return { ...row.contact, companyName: row.companyName, companyPhone: row.companyPhone, locationName: row.locationName };
+    return { ...publicContact(row.contact), companyName: row.companyName, companyPhone: row.companyPhone, locationName: row.locationName };
   });
 
   app.post('/contacts', { config: { perm: 'companies.write' } }, async (req, reply) => {
@@ -335,7 +335,7 @@ export async function crmRoutes(app: FastifyInstance) {
       const [r] = await tx.insert(s.contacts).values({ ...input, customFields }).returning();
       if (input.isPrimary) await setPrimaryContact(tx, r!.companyId, r!.id);
       await audit(tx, req, { action: 'create', entityType: 'contact', entityId: r!.id, summary: `${r!.firstName} ${r!.lastName}` });
-      return r!;
+      return publicContact(r!);
     });
     return reply.status(201).send(row);
   });
@@ -351,7 +351,7 @@ export async function crmRoutes(app: FastifyInstance) {
       if ('customFields' in body) data.customFields = await validateCustomFields(tx, 'contact', input.customFields, before.customFields);
       const companyId = data.companyId ?? before.companyId;
       if (data.locationId) await assertLocation(tx, data.locationId, companyId);
-      const [row] = await tx.update(s.contacts).set(data).where(eq(s.contacts.id, id)).returning();
+      const [row] = await tx.update(s.contacts).set(data).where(eq(s.contacts.id, id)).returning().then((r) => r.map(publicContact));
       if (data.isPrimary) await setPrimaryContact(tx, companyId, id);
       await audit(tx, req, { action: 'update', entityType: 'contact', entityId: id, changes: diff(before, data) });
       return row;
@@ -470,6 +470,12 @@ export async function crmRoutes(app: FastifyInstance) {
 async function assertLocation(db: Tx, locationId: number, companyId: number) {
   const [l] = await db.select({ companyId: s.locations.companyId }).from(s.locations).where(eq(s.locations.id, locationId));
   if (!l || l.companyId !== companyId) throw badRequest('The location does not belong to this company', { fields: { locationId: 'Location belongs to another company' } });
+}
+
+/** Never expose portal credentials through staff endpoints. */
+function publicContact<T extends { portalPasswordHash?: string | null }>(c: T): Omit<T, 'portalPasswordHash'> & { portalPasswordSet: boolean } {
+  const { portalPasswordHash, ...rest } = c;
+  return { ...rest, portalPasswordSet: !!portalPasswordHash };
 }
 
 async function setPrimaryContact(db: Tx, companyId: number, contactId: number) {

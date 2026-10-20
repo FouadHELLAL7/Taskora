@@ -10,6 +10,8 @@ import { ErrorBoundary } from './components/error-boundary';
 import LoginPage from './pages/auth/login';
 import SetupPage from './pages/auth/setup';
 
+const PortalApp = lazy(() => import('./pages/portal/index'));
+
 const page = (loader: () => Promise<{ default: ComponentType<any> }>) => lazy(loader);
 
 const Dashboard = page(() => import('./pages/dashboard'));
@@ -99,6 +101,14 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/setup" element={<SetupPage />} />
+      <Route
+        path="/portal/*"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <PortalApp />
+          </Suspense>
+        }
+      />
       <Route
         element={
           <RequireAuth>

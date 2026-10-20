@@ -18,4 +18,5 @@
 - E-mail: SMTP notifications, customer replies from notes, IMAP inbound e-mail to ticket.
 - Recurring tickets, ticket checklists, dispatch board.
 - Session management, CSV import, generated API reference.
+- Customer portal MVP; contract renewal and warranty reminders; ticket list column chooser.
 - Playwright end-to-end tests.
