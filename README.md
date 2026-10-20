@@ -46,6 +46,7 @@ The web app runs on <http://localhost:5173> (API on :3000, PostgreSQL on :54329,
 | `npm run typecheck` | Type-check all workspaces |
 | `npm test` | API integration tests (in-process PostgreSQL via PGlite) |
 | `npm run build` | Build API bundle and web app |
+| `npm run test:e2e` | Playwright browser tests against a running instance (`E2E_BASE_URL`, `E2E_EMAIL`, `E2E_PASSWORD`; first run `npx playwright install chromium`) |
 | `npm run db:generate` | Generate a migration after schema changes |
 
 ## Repository layout

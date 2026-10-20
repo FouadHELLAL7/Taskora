@@ -6,6 +6,7 @@ _Last updated: 2026-10-20 (end of session 1) — branch `develop/taskora-platfor
 
 - `npm run typecheck` (api, web, shared): clean.
 - API test suite: 83 tests across 8 files passing (auth/permissions, ticket lifecycle & SLA, CRM/CMDB, time/contracts/invoicing, workflow automation, projects/KB, reports, Action1 sync with mocked HTTP, demo seed, milestones).
+- Playwright browser E2E (`e2e/`): sign in → create company → raise ticket → internal note → log time → resolve; global search. 2/2 passing against the dev stack.
 - Live dev stack (`npm run dev`) with fictional demo data, checked in the browser: login, setup, dashboard, ticket list, ticket workspace (incl. Action1 device panel), company workspace, CI pages.
 - Docker images and compose: written and statically reviewed; **not built locally** (no Docker on the development machine). CI workflow `.github/workflows/ci.yml` builds both images on Ubuntu.
 
@@ -32,5 +33,5 @@ All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 
 ## Known gaps
 
-- No Playwright end-to-end tests yet.
+- Browser E2E tests are not yet wired into CI (they need a running stack with a known user).
 - Ticket service ignores a backdated `ctx.now` for events/notifications (only relevant to the demo seed, which corrects timestamps itself).
