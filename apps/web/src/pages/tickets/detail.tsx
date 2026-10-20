@@ -75,6 +75,8 @@ export default function TicketDetailPage() {
   const [resolveOpen, setResolveOpen] = useState<number | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editDescription, setEditDescription] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [mergeTarget, setMergeTarget] = useState<number | null>(null);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['ticket', id] });
@@ -101,6 +103,16 @@ export default function TicketDetailPage() {
   const watch = useMutation({
     mutationFn: (on: boolean) => (on ? api.post(`/tickets/${id}/watch`) : api.delete(`/tickets/${id}/watch`)),
     onSuccess: refresh,
+  });
+  const merge = useMutation({
+    mutationFn: () => api.post<{ ticketId: number }>(`/tickets/${id}/merge`, { intoTicketId: mergeTarget }),
+    onSuccess: (r) => {
+      toast.success('Tickets merged');
+      setMergeOpen(false);
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      navigate(`/tickets/${r.ticketId}`);
+    },
+    onError: (e) => handleFormError(e),
   });
   const remove = useMutation({
     mutationFn: () => api.delete(`/tickets/${id}`),
@@ -185,6 +197,11 @@ export default function TicketDetailPage() {
                 {canWrite && (
                   <DropdownItem onSelect={() => navigate(`/tickets/new?companyId=${t.companyId}${t.contactId ? `&contactId=${t.contactId}` : ''}`)}>
                     <Plus /> New ticket for this customer
+                  </DropdownItem>
+                )}
+                {canWrite && (
+                  <DropdownItem onSelect={() => setMergeOpen(true)}>
+                    <Copy /> Merge into another ticket…
                   </DropdownItem>
                 )}
                 <DropdownItem
@@ -431,6 +448,22 @@ export default function TicketDetailPage() {
           loading={update.isPending}
         />
       )}
+      <Dialog
+        open={mergeOpen}
+        onOpenChange={setMergeOpen}
+        title={`Merge ${t.ticketNumber} into…`}
+        description="Notes, time entries, attachments, checklist items and watchers move to the selected ticket of the same company; this ticket is closed as a duplicate."
+        footer={
+          <>
+            <Button onClick={() => setMergeOpen(false)}>Cancel</Button>
+            <Button variant="primary" disabled={!mergeTarget} loading={merge.isPending} onClick={() => merge.mutate()}>
+              Merge
+            </Button>
+          </>
+        }
+      >
+        <EntityPicker kind="ticket" value={mergeTarget} onChange={setMergeTarget} filter={{ companyId: t.companyId, statusCategory: 'all' }} placeholder="Find the ticket to keep…" />
+      </Dialog>
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
