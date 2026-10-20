@@ -41,7 +41,7 @@ All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 - CSV data import (companies, contacts, CIs) with preview, matching and Autotask-style headers.
 - Generated REST API reference `docs/api.md` (287 endpoints with permissions).
 - Production bundles (`dist/server.js`, `dist/worker.js`) smoke-tested with NODE_ENV=production against PostgreSQL.
-- Playwright E2E tests; web unit tests; 99 API tests across 14 files.
+- Final verification of session 1: `npm run typecheck` clean, 102 API tests (15 files) + 3 web unit tests passing, `npm run build` succeeds, Playwright E2E 2/2 passing.
 
 ## Known gaps
 
