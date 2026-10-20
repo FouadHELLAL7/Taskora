@@ -8,7 +8,7 @@
  * explicit upgrades, CI and troubleshooting.
  */
 import { loadConfig } from '../config.js';
-import { createDb, migrationsFolder, runMigrations } from './client.js';
+import { createDb, migrationsFolder, runMigrations, waitForDatabase } from './client.js';
 import { seedBase } from './seed/base.js';
 
 async function main(): Promise<void> {
@@ -16,6 +16,7 @@ async function main(): Promise<void> {
   const { db, pool } = createDb(config.DATABASE_URL, 2);
   try {
     console.log(`[migrate] applying migrations from ${migrationsFolder()}`);
+    await waitForDatabase(pool);
     await runMigrations(db);
     console.log('[migrate] migrations up to date');
     await seedBase(db);

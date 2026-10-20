@@ -7,7 +7,7 @@ import { hostname } from 'node:os';
 import { and, eq, lte, sql } from 'drizzle-orm';
 import pino from 'pino';
 import { loadConfig, type Config } from './config.js';
-import { createDb, runMigrations, type Db } from './db/client.js';
+import { createDb, runMigrations, waitForDatabase, type Db } from './db/client.js';
 import { integrations } from './db/schema/index.js';
 import { claimJob, completeJob, enqueue, failJob, recoverStaleJobs, type JobRow } from './jobs/queue.js';
 import { runSlaMonitor } from './jobs/sla-monitor.js';
@@ -62,6 +62,7 @@ async function schedule(db: Db) {
 
 async function main() {
   const { db, pool } = createDb(config.DATABASE_URL, Math.min(config.DATABASE_POOL_MAX, 5));
+  await waitForDatabase(pool, 120_000, (m) => log.warn(m));
   await runMigrations(db);
   log.info({ workerId }, 'worker started');
 

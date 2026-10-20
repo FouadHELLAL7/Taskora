@@ -35,6 +35,26 @@ export function migrationsFolder(): string {
   return found;
 }
 
+/**
+ * Waits until PostgreSQL accepts queries (it may still be starting or
+ * recovering after a reboot) instead of crashing on the first attempt.
+ */
+export async function waitForDatabase(pool: pg.Pool, timeoutMs = 120_000, log: (m: string) => void = console.warn): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+  for (;;) {
+    try {
+      await pool.query('select 1');
+      return;
+    } catch (err) {
+      attempt++;
+      if (Date.now() > deadline) throw err;
+      if (attempt === 1 || attempt % 10 === 0) log(`Waiting for the database: ${(err as Error).message}`);
+      await new Promise((r) => setTimeout(r, Math.min(5000, 500 * attempt)));
+    }
+  }
+}
+
 export async function runMigrations(db: Db): Promise<void> {
   await migrate(db, { migrationsFolder: migrationsFolder() });
 }

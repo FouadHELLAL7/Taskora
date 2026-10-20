@@ -1,5 +1,5 @@
 import { loadConfig } from './config.js';
-import { createDb, runMigrations } from './db/client.js';
+import { createDb, runMigrations, waitForDatabase } from './db/client.js';
 import { seedBase } from './db/seed/base.js';
 import { buildApp } from './app.js';
 import { announceSetupToken } from './modules/auth/routes.js';
@@ -9,6 +9,7 @@ const { db, pool } = createDb(config.DATABASE_URL, config.DATABASE_POOL_MAX);
 
 // Migrations are idempotent and guarded by drizzle's migration table, so the
 // API applies them on start-up; this keeps `docker compose up` a single step.
+await waitForDatabase(pool);
 await runMigrations(db);
 await seedBase(db);
 
