@@ -3,7 +3,9 @@
  * workflow rules, Action1 synchronisation) and processes queued jobs.
  * Several workers can run concurrently; jobs are claimed with SKIP LOCKED.
  */
-import { hostname } from 'node:os';
+import { writeFileSync } from 'node:fs';
+import { hostname, tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { and, eq, lte, sql } from 'drizzle-orm';
 import pino from 'pino';
 import { loadConfig, type Config } from './config.js';
@@ -24,6 +26,7 @@ import { imapConfigured, pollInbox } from './jobs/inbound-email.js';
 const config = loadConfig();
 const log = pino({ level: config.LOG_LEVEL, base: { svc: 'worker' } });
 const workerId = `${hostname()}:${process.pid}`;
+const HEARTBEAT_FILE = join(tmpdir(), 'taskora-worker-heartbeat');
 
 type Handler = (db: Db, config: Config, job: JobRow) => Promise<unknown>;
 
@@ -78,6 +81,18 @@ async function main() {
   await waitForDatabase(pool, 120_000, (m) => log.warn(m));
   await runMigrations(db);
   log.info({ workerId }, 'worker started');
+
+  // Liveness for the container healthcheck: the file's mtime stays fresh while
+  // the event loop runs (docker-compose.yml checks it is younger than 90 s).
+  const heartbeat = () => {
+    try {
+      writeFileSync(HEARTBEAT_FILE, new Date().toISOString());
+    } catch (err) {
+      log.warn({ err: (err as Error).message }, 'cannot write heartbeat file');
+    }
+  };
+  heartbeat();
+  setInterval(heartbeat, 15_000).unref();
 
   let stopping = false;
   let lastSchedule = 0;

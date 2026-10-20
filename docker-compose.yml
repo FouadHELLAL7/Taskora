@@ -119,10 +119,16 @@ services:
       # The API applies migrations on start; wait until it is healthy.
       api:
         condition: service_healthy
-    # The worker has no HTTP port; tini exits (and Docker restarts the
-    # container) if the worker process dies, so no healthcheck is needed.
+    # The worker has no HTTP port: it refreshes /tmp/taskora-worker-heartbeat
+    # every 15 s once migrations are done. (tini exits, and Docker restarts the
+    # container, if the worker process dies.) A real healthcheck is also needed
+    # for `docker compose up --wait`, which rejects containers without one.
     healthcheck:
-      disable: true
+      test: ["CMD", "node", "-e", "try{process.exit(Date.now()-require('fs').statSync(require('os').tmpdir()+'/taskora-worker-heartbeat').mtimeMs<90000?0:1)}catch{process.exit(1)}"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     stop_grace_period: 20s
 
   web:
