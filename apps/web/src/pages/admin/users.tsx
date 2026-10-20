@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { KeyRound, Lock, MoreHorizontal, Pencil, Plus, Power, ShieldCheck, Trash2, Unlock, Users } from 'lucide-react';
+import { KeyRound, Lock, LogOut, MoreHorizontal, Pencil, Plus, Power, ShieldCheck, Trash2, Unlock, Users } from 'lucide-react';
 import { ALL_PERMISSIONS } from '@taskora/shared';
 import { api, type Paginated } from '@/lib/api';
 import { useMe } from '@/lib/auth';
@@ -148,6 +148,14 @@ function UsersTab() {
                   </Button>
                 </DropdownTrigger>
                 <DropdownContent>
+                  <DropdownItem
+                    onSelect={async () => {
+                      const r = await api.post<{ revoked: number }>(`/users/${u.id}/revoke-sessions`);
+                      toast.success(`Signed out of ${r.revoked} session(s)`);
+                    }}
+                  >
+                    <LogOut /> Sign out everywhere
+                  </DropdownItem>
                   <DropdownItem onSelect={() => setEditing(u)}>
                     <KeyRound /> Edit / reset password
                   </DropdownItem>
