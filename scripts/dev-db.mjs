@@ -16,6 +16,8 @@ const pg = new EmbeddedPostgres({
   password: 'taskora',
   port,
   persistent: true,
+  // Force UTF-8 regardless of the host locale (Windows defaults to a legacy code page).
+  initdbFlags: ['--encoding=UTF8', '--locale=C'],
   onLog: () => {},
   onError: (e) => console.error('[dev-db]', String(e).trim()),
 });
