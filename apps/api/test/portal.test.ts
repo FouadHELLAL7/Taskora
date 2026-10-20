@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Client, createTestApp, makeCompany, userClient, type TestContext } from './helpers.js';
+import { createPortalResetToken } from '../src/modules/portal/routes.js';
 
 let ctx: TestContext;
 let admin: Client;
@@ -60,6 +61,18 @@ describe('customer portal', () => {
     // Disabling access ends the session.
     await admin.post(`/api/v1/contacts/${emma.id}/portal`, { enabled: false });
     expect((await portal.get('/api/portal/tickets')).status).toBe(401);
+  });
+
+  it('resets a forgotten password with a one-time token', async () => {
+    const co = await makeCompany(admin, 'Reset Co');
+    const c = (await admin.post('/api/v1/contacts', { companyId: co.id, firstName: 'Rita', lastName: 'R', email: 'rita@reset.example' })).body;
+    await admin.post(`/api/v1/contacts/${c.id}/portal`, { enabled: true });
+    expect((await new Client(ctx.app).post('/api/portal/forgot-password', { email: 'nobody@reset.example' })).body).toEqual({ ok: true });
+    const token = await createPortalResetToken(ctx.db, c.id);
+    expect((await new Client(ctx.app).post('/api/portal/reset-password', { token: 'x'.repeat(30), password: 'Brand-new-pass-1' })).status).toBe(400);
+    expect((await new Client(ctx.app).post('/api/portal/reset-password', { token, password: 'Brand-new-pass-1' })).status).toBe(200);
+    expect((await new Client(ctx.app).post('/api/portal/reset-password', { token, password: 'Another-pass-22' })).status).toBe(400);
+    await portalLogin('rita@reset.example', 'Brand-new-pass-1');
   });
 
   it('rejects wrong passwords and contacts without access', async () => {

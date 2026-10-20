@@ -473,8 +473,8 @@ async function assertLocation(db: Tx, locationId: number, companyId: number) {
 }
 
 /** Never expose portal credentials through staff endpoints. */
-function publicContact<T extends { portalPasswordHash?: string | null }>(c: T): Omit<T, 'portalPasswordHash'> & { portalPasswordSet: boolean } {
-  const { portalPasswordHash, ...rest } = c;
+function publicContact<T extends { portalPasswordHash?: string | null; portalResetTokenHash?: string | null }>(c: T): Omit<T, 'portalPasswordHash' | 'portalResetTokenHash'> & { portalPasswordSet: boolean } {
+  const { portalPasswordHash, portalResetTokenHash: _reset, ...rest } = c;
   return { ...rest, portalPasswordSet: !!portalPasswordHash };
 }
 

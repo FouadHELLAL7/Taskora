@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, BookOpen, LogOut, Plus, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
@@ -123,6 +123,17 @@ function Login() {
           <Button type="submit" variant="primary" className="w-full" size="lg" loading={login.isPending}>
             Sign in
           </Button>
+          <button
+            type="button"
+            className="w-full cursor-pointer text-center text-xs text-muted hover:text-foreground"
+            onClick={async () => {
+              if (!email) return setError('Enter your e-mail address first');
+              await papi('POST', '/forgot-password', { email });
+              toast.success('If an account exists, a reset link has been sent to your e-mail.');
+            }}
+          >
+            Forgot your password?
+          </button>
         </form>
       </Card>
     </div>
@@ -318,12 +329,48 @@ function KnowledgeBase() {
   );
 }
 
+function ResetPassword() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const reset = useMutation({
+    mutationFn: () => papi('POST', '/reset-password', { token: params.get('token') ?? '', password }),
+    onSuccess: () => {
+      toast.success('Password changed — you can sign in now');
+      navigate('/portal/login');
+    },
+    onError: (e) => setError((e as Error).message),
+  });
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-sm p-6">
+        <h1 className="text-base font-semibold">Choose a new password</h1>
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            reset.mutate();
+          }}
+        >
+          <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 10 characters" />
+          {error && <p className="rounded bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>}
+          <Button type="submit" variant="primary" className="w-full" disabled={password.length < 10} loading={reset.isPending}>
+            Save password
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
 /** Customer portal, mounted at /portal/* outside the staff application. */
 export default function PortalApp() {
   const me = usePortalMe();
   return (
     <Routes>
       <Route path="login" element={<Login />} />
+      <Route path="reset" element={<ResetPassword />} />
       <Route
         path="*"
         element={

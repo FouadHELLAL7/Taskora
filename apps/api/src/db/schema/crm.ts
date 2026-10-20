@@ -84,6 +84,8 @@ export const contacts = pgTable(
     portalEnabled: boolean('portal_enabled').notNull().default(false),
     portalPasswordHash: text('portal_password_hash'),
     portalLastLoginAt: timestamp('portal_last_login_at', { withTimezone: true }),
+    portalResetTokenHash: text('portal_reset_token_hash'),
+    portalResetExpiresAt: timestamp('portal_reset_expires_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

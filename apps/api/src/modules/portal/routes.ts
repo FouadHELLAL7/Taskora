@@ -16,6 +16,8 @@ import { idOf } from '../../lib/params.js';
 import { likeTerm } from '../../lib/query.js';
 import { addTicketNote, createTicket, updateTicket } from '../tickets/service.js';
 import { runTicketRules } from '../automation/engine.js';
+import { createTransport, smtpConfigured } from '../../jobs/email.js';
+import type { Db } from '../../db/client.js';
 
 export const PORTAL_COOKIE = 'taskora_portal';
 const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -41,6 +43,18 @@ const loginSchema = z.object({ email: z.string().trim().toLowerCase().email(), p
 const ticketSchema = z.object({ title: z.string().trim().min(3, 'Please describe the issue briefly').max(255), description: z.string().trim().max(20000).default('') });
 const replySchema = z.object({ body: z.string().trim().min(1, 'Required').max(20000) });
 const accessSchema = z.object({ enabled: z.boolean(), resetPassword: z.boolean().default(false) });
+const forgotSchema = z.object({ email: z.string().trim().toLowerCase().email() });
+const resetSchema = z.object({ token: z.string().min(20).max(200), password: z.string().min(10, 'Use at least 10 characters').max(256) });
+
+/** Issues a one-hour password reset token for a portal contact (only the hash is stored). */
+export async function createPortalResetToken(db: Db, contactId: number): Promise<string> {
+  const token = randomToken(32);
+  await db
+    .update(s.contacts)
+    .set({ portalResetTokenHash: sha256(token), portalResetExpiresAt: new Date(Date.now() + 3600_000) })
+    .where(eq(s.contacts.id, contactId));
+  return token;
+}
 
 function contactOf(req: FastifyRequest): PortalContact {
   if (!req.portalContact) throw unauthorized();
@@ -82,7 +96,7 @@ export async function portalRoutes(app: FastifyInstance) {
             };
           }
         }
-        const open = req.url.endsWith('/login') || (req.method === 'GET' && req.url.endsWith('/me'));
+        const open = req.url.endsWith('/login') || req.url.endsWith('/forgot-password') || req.url.endsWith('/reset-password') || (req.method === 'GET' && req.url.endsWith('/me'));
         if (open) return;
         if (!req.portalContact) throw unauthorized();
         if (!SAFE.has(req.method) && req.headers['x-csrf-token'] !== req.portalContact.csrfToken) throw forbidden('Missing or invalid CSRF token');
@@ -105,6 +119,45 @@ export async function portalRoutes(app: FastifyInstance) {
         await app.db.update(s.contacts).set({ portalLastLoginAt: new Date() }).where(eq(s.contacts.id, match.id));
         reply.setCookie(PORTAL_COOKIE, token, { path: '/api/portal', httpOnly: true, sameSite: 'lax', secure: app.config.COOKIE_SECURE === 'true' || (app.config.COOKIE_SECURE === 'auto' && req.protocol === 'https'), expires: expiresAt });
         return { ok: true, csrfToken };
+      });
+
+      /** Always answers OK so the endpoint cannot be used to discover accounts. */
+      portal.post('/forgot-password', { config: { rateLimit: { max: app.config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' } } }, async (req) => {
+        const { email } = forgotSchema.parse(req.body);
+        const [contact] = await app.db
+          .select()
+          .from(s.contacts)
+          .where(and(sql`lower(${s.contacts.email}) = ${email}`, eq(s.contacts.portalEnabled, true), eq(s.contacts.isActive, true)))
+          .limit(1);
+        if (contact && smtpConfigured(app.config)) {
+          const token = await createPortalResetToken(app.db, contact.id);
+          const base = (app.config.PUBLIC_URL ?? `${req.protocol}://${req.headers.host}`).replace(/\/$/, '');
+          const link = `${base}/portal/reset?token=${encodeURIComponent(token)}`;
+          await createTransport(app.config)
+            .sendMail({
+              from: app.config.SMTP_FROM,
+              to: contact.email!,
+              subject: 'Reset your support portal password',
+              text: `Hello ${contact.firstName},\n\nUse this link within one hour to choose a new password:\n${link}\n\nIf you did not request this, you can ignore this e-mail.`,
+            })
+            .catch((err: Error) => req.log.warn({ err: err.message }, 'portal reset e-mail failed'));
+        }
+        return { ok: true };
+      });
+
+      portal.post('/reset-password', { config: { rateLimit: { max: app.config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' } } }, async (req) => {
+        const input = resetSchema.parse(req.body);
+        const [contact] = await app.db
+          .select({ id: s.contacts.id })
+          .from(s.contacts)
+          .where(and(eq(s.contacts.portalResetTokenHash, sha256(input.token)), sql`${s.contacts.portalResetExpiresAt} > now()`, eq(s.contacts.portalEnabled, true)));
+        if (!contact) throw badRequest('This reset link is invalid or has expired');
+        await app.db
+          .update(s.contacts)
+          .set({ portalPasswordHash: await hashPassword(input.password), portalResetTokenHash: null, portalResetExpiresAt: null })
+          .where(eq(s.contacts.id, contact.id));
+        await app.db.delete(s.portalSessions).where(eq(s.portalSessions.contactId, contact.id));
+        return { ok: true };
       });
 
       portal.post('/logout', async (req, reply) => {
