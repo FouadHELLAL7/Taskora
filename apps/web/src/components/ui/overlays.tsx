@@ -127,7 +127,7 @@ export function DropdownContent({ children, align = 'end', className }: { childr
   );
 }
 
-export function DropdownItem({ children, onSelect, danger, disabled }: { children: ReactNode; onSelect?: () => void; danger?: boolean; disabled?: boolean }) {
+export function DropdownItem({ children, onSelect, danger, disabled }: { children: ReactNode; onSelect?: (e: Event) => void; danger?: boolean; disabled?: boolean }) {
   return (
     <DropdownPrimitive.Item
       disabled={disabled}

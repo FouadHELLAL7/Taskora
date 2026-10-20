@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookmarkPlus, Download, Flag, Inbox, Plus, Star, Ticket, Trash2, X } from 'lucide-react';
+import { BookmarkPlus, Columns3, Download, Flag, Inbox, Plus, Star, Ticket, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, downloadUrl, type Paginated } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { useAuth, useMe } from '@/lib/auth';
 import { opts, useLookups, userOpts } from '@/lib/lookups';
 import { cn, fmtRelative } from '@/lib/utils';
 import { useTableState } from '@/hooks/use-table-state';
@@ -128,9 +128,20 @@ export default function TicketListPage({ preset = 'all' }: { preset?: keyof type
   const p = PRESETS[preset];
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { can } = useAuth();
+  const { can, refresh } = useAuth();
+  const me = useMe();
   const lookups = useLookups();
   const t = useTableState({ sort: 'lastActivityAt', order: 'desc', filters: p.filters });
+  const hidden = new Set((me.preferences.ticketColumns as string[] | undefined) ?? []);
+  const toggleColumn = async (header: string) => {
+    const next = new Set(hidden);
+    if (next.has(header)) next.delete(header);
+    else next.add(header);
+    await api.patch('/auth/preferences', { ticketColumns: [...next] });
+    await refresh();
+  };
+  const optionalHeaders = ticketColumns.map((c) => String(c.header)).filter((h) => h !== 'Ticket' && h !== 'Title');
+  const visibleColumns = ticketColumns.filter((c) => !hidden.has(String(c.header)));
   const [selection, setSelection] = useState<Record<string, boolean>>({});
   const [saveOpen, setSaveOpen] = useState(false);
   const selectedIds = Object.keys(selection).filter((k) => selection[k]).map(Number);
@@ -212,6 +223,28 @@ export default function TicketListPage({ preset = 'all' }: { preset?: keyof type
                   </DropdownItem>
                 </DropdownContent>
               </DropdownMenu>
+              <DropdownMenu>
+                <DropdownTrigger asChild>
+                  <Button>
+                    <Columns3 /> Columns
+                  </Button>
+                </DropdownTrigger>
+                <DropdownContent>
+                  <DropdownLabel>Visible columns</DropdownLabel>
+                  {optionalHeaders.map((h) => (
+                    <DropdownItem
+                      key={h}
+                      onSelect={(e?: Event) => {
+                        e?.preventDefault();
+                        void toggleColumn(h);
+                      }}
+                    >
+                      <input type="checkbox" readOnly checked={!hidden.has(h)} className="accent-[var(--primary)]" />
+                      {h}
+                    </DropdownItem>
+                  ))}
+                </DropdownContent>
+              </DropdownMenu>
               <Button onClick={() => downloadUrl('/tickets/export.csv', query as never)}>
                 <Download /> Export
               </Button>
@@ -290,7 +323,7 @@ export default function TicketListPage({ preset = 'all' }: { preset?: keyof type
     >
       <DataTable
         className="h-full"
-        columns={ticketColumns}
+        columns={visibleColumns}
         data={list.data?.data}
         total={list.data?.total}
         page={t.page}
