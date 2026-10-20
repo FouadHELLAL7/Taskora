@@ -85,8 +85,8 @@ async function defaultContractId(db: Tx, companyId: number): Promise<number | nu
   return c?.id ?? null;
 }
 
-async function event(db: Tx, ticketId: number, userId: number | null, type: string, data: Record<string, unknown> = {}) {
-  await db.insert(s.ticketEvents).values({ ticketId, userId, type, data });
+async function event(db: Tx, ticketId: number, userId: number | null, type: string, data: Record<string, unknown> = {}, at?: Date) {
+  await db.insert(s.ticketEvents).values({ ticketId, userId, type, data, ...(at ? { createdAt: at } : {}) });
 }
 
 async function ticketVars(db: Tx, t: TicketRow, actorId: number | null) {
@@ -172,7 +172,7 @@ export async function createTicket(ctx: TicketCtx, raw: TicketInput | ParsedTick
     })
     .returning();
 
-  await event(db, ticket!.id, ctx.userId, 'created', { automation: !!ctx.automation });
+  await event(db, ticket!.id, ctx.userId, 'created', { automation: !!ctx.automation }, now);
   if (ticket!.assignedUserId) {
     await notifyFromTemplate(
       db,
@@ -254,7 +254,7 @@ export async function updateTicket(
       data.resolvedAt = null;
       data.closedAt = null;
       data.resolutionBreached = false;
-      await event(db, id, ctx.userId, 'reopened', { from: oldSt.name, to: newSt.name });
+      await event(db, id, ctx.userId, 'reopened', { from: oldSt.name, to: newSt.name }, now);
     }
     // SLA pause / resume.
     if (newSt.pausesSla && !before.slaPausedAt) data.slaPausedAt = now;
@@ -269,7 +269,7 @@ export async function updateTicket(
       fromId: oldSt.id,
       toId: newSt.id,
       automation: !!ctx.automation,
-    });
+    }, now);
   }
 
   if (changed.includes('contractId') && !('slaId' in patch)) {
@@ -308,16 +308,16 @@ export async function updateTicket(
   for (const key of changed) {
     if (key === 'statusId') continue;
     if (key === 'assignedUserId') {
-      await event(db, id, ctx.userId, 'assigned', { from: before.assignedUserId, to: data.assignedUserId, automation: !!ctx.automation });
+      await event(db, id, ctx.userId, 'assigned', { from: before.assignedUserId, to: data.assignedUserId, automation: !!ctx.automation }, now);
     } else if (key === 'description' || key === 'customFields') {
-      await event(db, id, ctx.userId, 'field_changed', { field: key });
+      await event(db, id, ctx.userId, 'field_changed', { field: key }, now);
     } else {
       await event(db, id, ctx.userId, 'field_changed', {
         field: key,
         from: (before as Record<string, unknown>)[key] ?? null,
         to: normalise((data as Record<string, unknown>)[key]),
         automation: !!ctx.automation,
-      });
+      }, now);
     }
   }
 
@@ -351,7 +351,7 @@ export async function addTicketNote(
     .insert(s.ticketNotes)
     .values({ ticketId, userId: ctx.userId, body: input.body, visibility: input.visibility, kind: input.kind ?? 'note', createdAt: now })
     .returning();
-  await event(db, ticketId, ctx.userId, 'note_added', { noteId: note!.id, visibility: input.visibility });
+  await event(db, ticketId, ctx.userId, 'note_added', { noteId: note!.id, visibility: input.visibility }, now);
 
   // A customer-visible note from a technician is a first response.
   if (input.visibility === 'public' && !ticket.firstResponseAt && ctx.userId) {

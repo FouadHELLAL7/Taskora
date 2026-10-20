@@ -198,6 +198,8 @@ describe('projects and knowledge', () => {
   it('publishes, searches and links knowledge base articles', async () => {
     const a = await tech.post('/api/v1/kb/articles', { title: 'Reset an Outlook profile', body: '1. Close Outlook\n2. Open Mail in Control Panel', tags: ['outlook'], status: 'published' });
     expect(a.body.articleNumber).toMatch(/^KB-/);
+    expect((await tech.get('/api/v1/kb/articles?scope=kb')).status).toBe(200);
+    expect((await tech.get('/api/v1/kb/articles?scope=docs')).status).toBe(200);
     const found = await tech.get('/api/v1/kb/articles?q=outlook');
     expect(found.body.data[0].id).toBe(a.body.id);
     const co = await makeCompany(admin, 'KB Co');

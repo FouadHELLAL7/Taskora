@@ -32,7 +32,7 @@ export async function kbRoutes(app: FastifyInstance) {
         : undefined,
     );
     // Title matches rank above body matches.
-    const rank = term ? sql`(case when ${s.kbArticles.title} ilike ${term} then 0 else 1 end)` : sql`0`;
+    const rank = term ? [sql`(case when ${s.kbArticles.title} ilike ${term} then 0 else 1 end)`] : [];
     const rows = await app.db
       .select({
         id: s.kbArticles.id,
@@ -55,7 +55,7 @@ export async function kbRoutes(app: FastifyInstance) {
       .leftJoin(s.companies, eq(s.companies.id, s.kbArticles.companyId))
       .leftJoin(s.users, eq(s.users.id, s.kbArticles.authorId))
       .where(where)
-      .orderBy(rank, desc(s.kbArticles.updatedAt))
+      .orderBy(...rank, desc(s.kbArticles.updatedAt))
       .limit(q.pageSize)
       .offset((q.page - 1) * q.pageSize);
     const [{ n }] = (await app.db.select({ n: countAll }).from(s.kbArticles).where(where)) as [{ n: number }];
