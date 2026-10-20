@@ -1,6 +1,6 @@
 # Taskora progress
 
-_Last updated: 2026-10-20 — branch `develop/taskora-platform`_
+_Last updated: 2026-10-20 (end of session 1) — branch `develop/taskora-platform`_
 
 ## Verified
 
@@ -24,9 +24,11 @@ _Last updated: 2026-10-20 — branch `develop/taskora-platform`_
 | Docker, compose, nginx, scripts, CI, docs | ✅ |
 | Demo data seed | ✅ |
 
-## Backend complete, UI pending
+## Also implemented (UI)
 
-Opportunities, products, asset types, software inventory, Action1 endpoint review page, invoice detail, services catalog, projects/tasks/milestones, knowledge base & documentation, reports & analytics, workflow rule builder, integrations admin page, system settings (general, SLA, business hours, work types, billing codes, templates), audit log viewer. Their routes exist in `apps/web/src/App.tsx`; files still marked `STUB` render a placeholder header.
+Opportunities pipeline (drag & drop), products, asset types with counts, software inventory, Action1 integration settings (credentials, mapping, sync history) and endpoint review, invoice detail (lines, issue/pay/void, PDF), services catalogue, projects (board, milestones, time), tasks, milestones, knowledge base & documentation (Markdown editor with preview), reports (tickets/time/SLA/assets with CSV) and analytics, workflow rule builder with dry-run test and execution history, system settings (general, SLA policies, business hours & holidays, work types, billing codes, CI types, notification templates), audit log viewer.
+
+All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 
 ## Known gaps
 

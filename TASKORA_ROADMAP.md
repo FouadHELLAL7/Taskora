@@ -21,17 +21,17 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned
 ## Phase 3 — CMDB ✅
 - ✅ CIs, CI types, manual creation, company/contact/ticket relationships, relations, software, detail workspace
 
-## Phase 4 — Action1 ✅ (backend) / 🟡 (admin UI)
+## Phase 4 — Action1 ✅
 - ✅ Client, sync, mapping, matching/dedupe, logs, CI & ticket device panels
-- 🟡 Admin integration page and endpoint review page (API complete; UI in progress)
+- ✅ Admin integration page and endpoint review page
 
-## Phase 5 — Business functions 🟡
+## Phase 5 — Business functions ✅
 - ✅ Contracts, SLAs, time & billing API; contracts/time/billing/invoice list UI
-- 🟡 Invoice detail, services catalog, projects and knowledge base UI
+- ✅ Invoice detail, services catalog, projects and knowledge base UI
 
-## Phase 6 — Advanced 🟡
+## Phase 6 — Advanced ✅ (first iteration)
 - ✅ Workflow engine, notifications, global search, custom fields (API + editor), reports API
-- 🟡 Workflow builder UI, reports/analytics UI, system settings UI, audit UI
+- ✅ Workflow builder UI, reports/analytics UI, system settings UI, audit UI
 
 ## Later
 - ⬜ E-mail (SMTP) notifications and inbound e-mail to ticket

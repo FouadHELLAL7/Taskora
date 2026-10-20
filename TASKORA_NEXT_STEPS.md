@@ -4,17 +4,12 @@ Resume with:
 
 ```bash
 git checkout develop/taskora-platform && npm install && npm run dev
-grep -rl "STUB: replaced" apps/web/src/pages      # pages still to implement
 ```
 
-## Priority 1 — finish remaining UI pages (APIs already exist)
-1. `pages/integrations/action1-endpoints.tsx` + `pages/admin/integrations.tsx` — Action1 settings (region, credentials, test, sync now, org mapping, sync runs) and endpoint review (link/create/ignore). API: `apps/api/src/modules/integrations/routes.ts`.
-2. `pages/admin/system.tsx` — system settings, SLA policies with per-priority targets, business hours & holidays, work types, billing codes, notification templates.
-3. `pages/admin/workflows.tsx` — rule list + builder (conditions/actions) + execution history.
-4. `pages/projects/*` — list, detail (tasks board, milestones, time, tickets), tasks, milestones (`GET /project-milestones`).
-5. `pages/kb/*` — list, article (sanitised Markdown), editor with preview, documentation.
-6. `pages/business/invoice-detail.tsx`, `services.tsx`; `pages/crm/opportunities.tsx`; `pages/assets/products.tsx`, `asset-types.tsx`, `software.tsx`.
-7. `pages/insights/reports.tsx`, `analytics.tsx`; `pages/admin/audit.tsx`.
+## Priority 1 — validate the deployment
+1. Check the GitHub Actions run for `develop/taskora-platform` (typecheck, tests, image builds) and fix any failure.
+2. On an Ubuntu VM: `bash scripts/install.sh`, complete setup, run `scripts/backup.sh` / `restore.sh` / `update.sh` once.
+3. Configure Action1 with real (read-only) API credentials, map organizations, run a sync and review endpoints.
 
 ## Priority 2 — quality
 - Run the CI workflow on GitHub and fix any Docker build issue; then test `docker compose up -d --build` on an Ubuntu VM.
