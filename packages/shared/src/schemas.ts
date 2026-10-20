@@ -328,8 +328,7 @@ export const serviceCallSchema = z.object({
 
 /* -------------------------------------------------------------------- time */
 
-export const timeEntrySchema = z
-  .object({
+export const timeEntryBaseSchema = z.object({
     userId: optId,
     ticketId: optId,
     projectTaskId: optId,
@@ -341,8 +340,11 @@ export const timeEntrySchema = z
     billable: z.boolean().default(true),
     description: reqText(10000),
     internalNotes: optText(10000),
-  })
-  .refine((v) => v.ticketId || v.projectTaskId, { message: 'Link the entry to a ticket or a project task', path: ['ticketId'] });
+});
+export const timeEntrySchema = timeEntryBaseSchema.refine((v) => v.ticketId || v.projectTaskId, {
+  message: 'Link the entry to a ticket or a project task',
+  path: ['ticketId'],
+});
 
 export const timerStartSchema = z.object({
   ticketId: optId,
