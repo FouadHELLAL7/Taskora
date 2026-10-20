@@ -2,7 +2,7 @@ import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { Config } from '../config.js';
 import type { Db } from '../db/client.js';
-import { notifications, users } from '../db/schema/index.js';
+import { contacts, notifications, ticketEvents, ticketNotes, tickets, users } from '../db/schema/index.js';
 import { getSystemSettings } from '../lib/settings.js';
 
 export function smtpConfigured(config: Config): boolean {
@@ -81,6 +81,41 @@ export async function dispatchNotificationEmails(db: Db, config: Config, transpo
   await mark(skipped, 'skipped');
   result.skipped = skipped.length;
   return result;
+}
+
+/**
+ * E-mails a customer-visible ticket note to the ticket contact. The ticket
+ * number in the subject lets the inbound poller thread the customer's reply.
+ */
+export async function sendCustomerNote(db: Db, config: Config, noteId: number, transport?: Transporter) {
+  if (!smtpConfigured(config)) throw new Error('SMTP is not configured');
+  const [row] = await db
+    .select({
+      body: ticketNotes.body,
+      visibility: ticketNotes.visibility,
+      ticketId: tickets.id,
+      ticketNumber: tickets.ticketNumber,
+      title: tickets.title,
+      email: contacts.email,
+      firstName: contacts.firstName,
+      author: sql<string | null>`${users.firstName} || ' ' || ${users.lastName}`,
+    })
+    .from(ticketNotes)
+    .innerJoin(tickets, eq(tickets.id, ticketNotes.ticketId))
+    .leftJoin(contacts, eq(contacts.id, tickets.contactId))
+    .leftJoin(users, eq(users.id, ticketNotes.userId))
+    .where(eq(ticketNotes.id, noteId));
+  if (!row || row.visibility !== 'public' || !row.email) return { sent: false };
+  const settings = await getSystemSettings(db);
+  const t = transport ?? createTransport(config);
+  await t.sendMail({
+    from: config.SMTP_FROM,
+    to: row.email,
+    subject: `[${row.ticketNumber}] ${row.title}`,
+    text: `Hello ${row.firstName ?? ''},\n\n${row.body}\n\n${row.author ?? settings.organizationName}\n${settings.organizationName}\n\nPlease keep [${row.ticketNumber}] in the subject when replying.`,
+  });
+  await db.insert(ticketEvents).values({ ticketId: row.ticketId, userId: null, type: 'email_sent', data: { to: row.email, noteId } });
+  return { sent: true };
 }
 
 /** Marks old pending notifications so they are never mailed late. */

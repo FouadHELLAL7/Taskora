@@ -13,7 +13,7 @@ import { claimJob, completeJob, enqueue, failJob, recoverStaleJobs, type JobRow 
 import { runSlaMonitor } from './jobs/sla-monitor.js';
 import { runStatusAgeRules } from './modules/automation/engine.js';
 import { runAction1Sync } from './integrations/action1/sync.js';
-import { dispatchNotificationEmails, expireStaleEmails, smtpConfigured } from './jobs/email.js';
+import { dispatchNotificationEmails, expireStaleEmails, sendCustomerNote, smtpConfigured } from './jobs/email.js';
 import { imapConfigured, pollInbox } from './jobs/inbound-email.js';
 
 const config = loadConfig();
@@ -31,6 +31,7 @@ const handlers: Record<string, Handler> = {
       userId: (job.payload.userId as number | null) ?? null,
     }),
   'email.dispatch': (db, cfg) => dispatchNotificationEmails(db, cfg),
+  'email.customer_note': (db, cfg, job) => sendCustomerNote(db, cfg, Number(job.payload.noteId)),
   'email.inbound': (db, cfg) => pollInbox(db, cfg, (m) => log.info({ job: 'email.inbound' }, m)),
   'maintenance.cleanup': async (db) => {
     await expireStaleEmails(db);

@@ -275,6 +275,8 @@ export const ticketNoteSchema = z.object({
   visibility: z.enum(NOTE_VISIBILITY.values).default('internal'),
   /** Optional status change applied together with the note. */
   statusId: optId,
+  /** E-mail a customer-visible note to the ticket contact (requires SMTP). */
+  notifyContact: z.boolean().default(false),
 });
 
 export const ticketBulkSchema = z.object({

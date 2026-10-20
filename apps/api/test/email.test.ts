@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { createTestApp, makeCompany, userClient, type Client, type TestContext } from './helpers.js';
 import { schema } from '../src/db/client.js';
 import { loadConfig } from '../src/config.js';
-import { dispatchNotificationEmails } from '../src/jobs/email.js';
+import { dispatchNotificationEmails, sendCustomerNote } from '../src/jobs/email.js';
 
 let ctx: TestContext;
 let admin: Client & { userId: number };
@@ -41,5 +41,20 @@ describe('e-mail notifications', () => {
     expect(third).toMatchObject({ sent: 0, skipped: 1 });
     const rows = await ctx.db.select().from(schema.notifications).where(eq(schema.notifications.userId, tech.userId));
     expect(rows.every((r) => r.emailStatus !== null)).toBe(true);
+  });
+
+  it('e-mails customer-visible notes to the ticket contact with the ticket number in the subject', async () => {
+    const sent: { to: string; subject: string; text: string }[] = [];
+    const transport = { sendMail: async (m: { to: string; subject: string; text: string }) => void sent.push(m) } as never;
+    const co = await makeCompany(admin, 'Reply Co');
+    const contact = await admin.post('/api/v1/contacts', { companyId: co.id, firstName: 'Liam', lastName: 'Brown', email: 'liam@reply.example' });
+    const { body: t } = await tech.post('/api/v1/tickets', { title: 'Mailbox full', companyId: co.id, contactId: contact.body.id });
+    const note = await tech.post(`/api/v1/tickets/${t.id}/notes`, { body: 'I archived old items, please check.', visibility: 'public', notifyContact: true });
+    expect(note.status).toBe(201);
+    const [job] = await ctx.db.select().from(schema.jobs).where(eq(schema.jobs.type, 'email.customer_note'));
+    expect(job!.payload).toEqual({ noteId: note.body.id });
+    expect(await sendCustomerNote(ctx.db, smtp, note.body.id, transport)).toEqual({ sent: true });
+    expect(sent[0]).toMatchObject({ to: 'liam@reply.example', subject: `[${t.ticketNumber}] Mailbox full` });
+    expect(sent[0]!.text).toContain('I archived old items');
   });
 });

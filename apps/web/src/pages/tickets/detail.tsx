@@ -562,9 +562,13 @@ function Composer({ ticket, onPosted, onResolveRequired }: { ticket: TicketDetai
   const [visibility, setVisibility] = useState<'internal' | 'public'>('internal');
   const [statusId, setStatusId] = useState('');
   const [logTime, setLogTime] = useState(false);
+  const me = useMe();
+  const canMail = me.emailEnabled && !!ticket.contactEmail;
+  const [mailContact, setMailContact] = useState(true);
   const ref = useRef<HTMLTextAreaElement>(null);
   const post = useMutation({
-    mutationFn: () => api.post(`/tickets/${ticket.id}/notes`, { body, visibility, statusId: statusId ? Number(statusId) : null }),
+    mutationFn: () =>
+      api.post(`/tickets/${ticket.id}/notes`, { body, visibility, statusId: statusId ? Number(statusId) : null, notifyContact: visibility === 'public' && canMail && mailContact }),
     onSuccess: () => {
       toast.success(visibility === 'public' ? 'Customer-visible note added' : 'Internal note added');
       setBody('');
@@ -612,6 +616,12 @@ function Composer({ ticket, onPosted, onResolveRequired }: { ticket: TicketDetai
           <Button size="sm" variant="ghost" onClick={() => setLogTime(true)}>
             <Clock /> Log time with this note
           </Button>
+          {visibility === 'public' && canMail && (
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              <input type="checkbox" checked={mailContact} onChange={(e) => setMailContact(e.target.checked)} className="accent-[var(--primary)]" />
+              E-mail to {ticket.contactEmail}
+            </label>
+          )}
           <Button size="sm" variant="primary" className="ml-auto" disabled={!body.trim()} loading={post.isPending} onClick={submit}>
             Post note
           </Button>

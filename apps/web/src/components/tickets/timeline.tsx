@@ -73,6 +73,8 @@ function describeEvent(type: string, d: Record<string, unknown>): { icon: typeof
       return { icon: Clock, text: <span className="text-danger">SLA {String(d.target).replace('_', ' ')} target breached</span> };
     case 'sla_warning':
       return { icon: Clock, text: <span className="text-warning">SLA {String(d.target).replace('_', ' ')} target at risk</span> };
+    case 'email_sent':
+      return { icon: Sparkles, text: <>e-mailed the note to <b>{String(d.to)}</b></> };
     case 'workflow':
       return { icon: Workflow, text: <>workflow rule <b>{String(d.rule)}</b> ran: {(d.results as string[] | undefined)?.join(', ')}</> };
     default:
