@@ -2,6 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import type { FastifyInstance, InjectOptions } from 'fastify';
+import type { Transporter } from 'nodemailer';
 import { eq } from 'drizzle-orm';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
@@ -16,13 +17,13 @@ export interface TestContext {
 }
 
 /** Spins up an isolated in-memory PostgreSQL (PGlite), migrated and seeded with base data. */
-export async function createTestApp(env: Record<string, string> = {}): Promise<TestContext> {
+export async function createTestApp(env: Record<string, string> = {}, opts: { mailTransport?: Transporter } = {}): Promise<TestContext> {
   const client = new PGlite();
   const db = drizzle(client, { schema }) as unknown as Db;
   await migrate(db as never, { migrationsFolder: migrationsFolder() });
   await seedBase(db);
   const config = loadConfig({ NODE_ENV: 'test', LOG_LEVEL: 'silent', TASKORA_SETUP_TOKEN: 'test-setup-token-123456', UPLOAD_DIR: './.data/test-uploads', AUTH_RATE_LIMIT_PER_MINUTE: '1000', ...env });
-  const app = await buildApp({ db, config, logger: false });
+  const app = await buildApp({ db, config, logger: false, mailTransport: opts.mailTransport });
   await app.ready();
   return {
     app,

@@ -22,6 +22,10 @@ const envSchema = z.object({
   TRUST_PROXY: bool(true),
   UPLOAD_DIR: z.string().default('./.data/uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(512).default(25),
+  /** Server-side folder for full backups (created from the UI or by the worker). */
+  BACKUP_DIR: z.string().default('./.data/backups'),
+  /** Largest backup file accepted for an uploaded restore. */
+  MAX_RESTORE_MB: z.coerce.number().int().min(1).max(4096).default(512),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   /** Allows overriding Action1 base URLs (tests / proxies). */
   ACTION1_BASE_URL_OVERRIDE: z.string().url().optional(),

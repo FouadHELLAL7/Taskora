@@ -20,6 +20,9 @@ import { recurringRoutes } from './tickets/recurring.js';
 import { checklistRoutes } from './tickets/checklist.js';
 import { importRoutes } from './imports/routes.js';
 import { portalAdminRoutes } from './portal/routes.js';
+import { backupRoutes } from './backup/routes.js';
+import { logoRoutes } from './logos/routes.js';
+import { emailRoutes } from './email/routes.js';
 
 export async function registerModules(app: FastifyInstance) {
   await app.register(settingsRoutes);
@@ -43,4 +46,7 @@ export async function registerModules(app: FastifyInstance) {
   await app.register(checklistRoutes);
   await app.register(importRoutes);
   await app.register(portalAdminRoutes);
+  await app.register(backupRoutes);
+  await app.register(logoRoutes);
+  await app.register(emailRoutes);
 }

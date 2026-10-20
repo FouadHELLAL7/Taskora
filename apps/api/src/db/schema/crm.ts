@@ -27,6 +27,8 @@ export const companies = pgTable(
     defaultSlaId: integer('default_sla_id').references(() => slaPolicies.id, { onDelete: 'set null' }),
     notes: text('notes'),
     customFields: customFields(),
+    /** Set while the company has a logo (see `logos`); doubles as a cache-busting version. */
+    logoUpdatedAt: timestamp('logo_updated_at', { withTimezone: true }),
     createdById: integer('created_by_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

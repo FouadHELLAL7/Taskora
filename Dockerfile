@@ -102,13 +102,14 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
     UPLOAD_DIR=/app/data/uploads \
+    BACKUP_DIR=/app/data/backups \
     NODE_OPTIONS=--enable-source-maps \
     TASKORA_VERSION=${TASKORA_VERSION}
 
 WORKDIR /app/apps/api
 
 # Application files are owned by root and read-only for the runtime user;
-# only /app/data (uploads volume) is writable.
+# only /app/data (uploads and backups volumes) is writable.
 COPY --from=api-deps /app/node_modules /app/node_modules
 COPY --from=api-deps /app/apps/api/node_modules ./node_modules
 # package.json provides "type": "module" for the ESM bundle in dist/.
@@ -119,9 +120,9 @@ COPY apps/api/drizzle ./drizzle
 COPY --from=build-api /src/apps/api/dist ./dist
 COPY --chmod=0755 deploy/docker-entrypoint.sh /usr/local/bin/taskora-entrypoint
 
-RUN mkdir -p /app/data/uploads \
+RUN mkdir -p /app/data/uploads /app/data/backups \
  && chown -R node:node /app/data \
- && chmod 0750 /app/data /app/data/uploads
+ && chmod 0750 /app/data /app/data/uploads /app/data/backups
 
 USER node
 EXPOSE 3000

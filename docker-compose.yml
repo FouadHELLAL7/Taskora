@@ -26,7 +26,7 @@ x-logging: &logging
 # Settings shared by api and worker. Values come from .env (see .env.example).
 # Everything in .env is also passed through `env_file`, which is how optional
 # settings such as TASKORA_SETUP_TOKEN reach the API; the explicit values
-# below take precedence (and NODE_ENV, DATABASE_URL and UPLOAD_DIR are fixed
+# below take precedence (and NODE_ENV, DATABASE_URL, UPLOAD_DIR and BACKUP_DIR are fixed
 # for this container layout).
 x-app-environment: &app-environment
   NODE_ENV: production
@@ -37,6 +37,8 @@ x-app-environment: &app-environment
   COOKIE_SECURE: ${COOKIE_SECURE:-auto}
   TRUST_PROXY: ${TRUST_PROXY:-true}
   UPLOAD_DIR: /app/data/uploads
+  BACKUP_DIR: /app/data/backups
+  MAX_RESTORE_MB: ${MAX_RESTORE_MB:-512}
   MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   WORKER_POLL_MS: ${WORKER_POLL_MS:-2000}
@@ -59,6 +61,8 @@ x-app-service: &app-service
     - no-new-privileges:true
   volumes:
     - taskora-uploads:/app/data/uploads
+    # Full backups from Administration > Backup & Restore and the worker's schedule.
+    - taskora-backups:/app/data/backups
   networks:
     - db
     - app
@@ -158,3 +162,4 @@ networks:
 volumes:
   taskora-db:
   taskora-uploads:
+  taskora-backups:

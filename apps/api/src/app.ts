@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { sql } from 'drizzle-orm';
+import type { Transporter } from 'nodemailer';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
 import { errorHandler } from './lib/errors.js';
@@ -16,9 +17,11 @@ export interface BuildOptions {
   db: Db;
   config: Config;
   logger?: boolean | object;
+  /** Overrides outgoing SMTP (tests). */
+  mailTransport?: Transporter;
 }
 
-export async function buildApp({ db, config, logger }: BuildOptions): Promise<FastifyInstance> {
+export async function buildApp({ db, config, logger, mailTransport }: BuildOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger:
       logger ??
@@ -31,6 +34,7 @@ export async function buildApp({ db, config, logger }: BuildOptions): Promise<Fa
 
   app.decorate('db', db);
   app.decorate('config', config);
+  app.decorate('mailTransport', mailTransport ?? null);
 
   // Route catalogue (method, path, permission) used to generate docs/api.md.
   const routeCatalog: { method: string; url: string; perm: string | null; public: boolean }[] = [];

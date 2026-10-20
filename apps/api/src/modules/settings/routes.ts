@@ -203,7 +203,11 @@ export async function settingsRoutes(app: FastifyInstance) {
 
   app.get('/settings/system', async () => getSystemSettings(app.db));
   app.put('/settings/system', { config: { perm: W } }, async (req) => {
-    const patch = systemSettingsSchema.partial().parse(req.body);
+    // Logo and backup schedule have their own endpoints (and permissions); ignore them here.
+    const patch = systemSettingsSchema
+      .omit({ logoUpdatedAt: true, autoBackupEnabled: true, autoBackupIntervalHours: true, backupRetention: true })
+      .partial()
+      .parse(req.body);
     const saved = await saveSystemSettings(app.db, patch);
     await audit(app.db, req, { action: 'update', entityType: 'system_settings', changes: patch });
     return saved;

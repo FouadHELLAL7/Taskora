@@ -49,6 +49,7 @@ export async function crmRoutes(app: FastifyInstance) {
         industry: s.companies.industry,
         accountManagerId: s.companies.accountManagerId,
         accountManagerName: sql<string | null>`${manager.firstName} || ' ' || ${manager.lastName}`,
+        logoUpdatedAt: s.companies.logoUpdatedAt,
         openTickets,
         ciCount,
         contactCount,
@@ -202,6 +203,7 @@ export async function crmRoutes(app: FastifyInstance) {
     if (n > 0) throw badRequest('This company has tickets. Mark it inactive instead of deleting it.');
     const [row] = await app.db.delete(s.companies).where(eq(s.companies.id, id)).returning();
     if (!row) throw notFound('Company');
+    await app.db.delete(s.logos).where(and(eq(s.logos.entityType, 'company'), eq(s.logos.entityId, id)));
     await audit(app.db, req, { action: 'delete', entityType: 'company', entityId: id, summary: row.name });
     return { ok: true };
   });

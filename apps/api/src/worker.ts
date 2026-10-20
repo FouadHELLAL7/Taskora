@@ -15,7 +15,10 @@ import { runStatusAgeRules } from './modules/automation/engine.js';
 import { runRecurringTickets } from './modules/tickets/recurring.js';
 import { runBusinessReminders } from './jobs/reminders.js';
 import { runAction1Sync } from './integrations/action1/sync.js';
-import { dispatchNotificationEmails, expireStaleEmails, sendCustomerNote, smtpConfigured } from './jobs/email.js';
+import { dispatchNotificationEmails, expireStaleEmails, sendCustomerNote } from './jobs/email.js';
+import { resolveSmtp } from './lib/mail.js';
+import { autoBackupDue, pruneAutoBackups, saveBackup } from './lib/backup.js';
+import { getSystemSettings } from './lib/settings.js';
 import { imapConfigured, pollInbox } from './jobs/inbound-email.js';
 
 const config = loadConfig();
@@ -37,6 +40,12 @@ const handlers: Record<string, Handler> = {
   'email.dispatch': (db, cfg) => dispatchNotificationEmails(db, cfg),
   'email.customer_note': (db, cfg, job) => sendCustomerNote(db, cfg, Number(job.payload.noteId)),
   'email.inbound': (db, cfg) => pollInbox(db, cfg, (m) => log.info({ job: 'email.inbound' }, m)),
+  'backup.auto': async (db, cfg) => {
+    const settings = await getSystemSettings(db);
+    const saved = await saveBackup(db, cfg, 'auto');
+    const pruned = await pruneAutoBackups(cfg, settings.backupRetention);
+    return { name: saved.name, sizeBytes: saved.sizeBytes, pruned };
+  },
   'maintenance.cleanup': async (db) => {
     await expireStaleEmails(db);
     await db.execute(sql`delete from sessions where expires_at < now()`);
@@ -51,7 +60,11 @@ async function schedule(db: Db) {
   await enqueue(db, 'sla.check', {}, { dedupeKey: 'sla.check', maxAttempts: 1 });
   await enqueue(db, 'workflow.status_age', {}, { dedupeKey: 'workflow.status_age', maxAttempts: 1 });
   await enqueue(db, 'tickets.recurring', {}, { dedupeKey: 'tickets.recurring', maxAttempts: 1 });
-  if (smtpConfigured(config)) await enqueue(db, 'email.dispatch', {}, { dedupeKey: 'email.dispatch', maxAttempts: 1 });
+  if (await resolveSmtp(db, config)) await enqueue(db, 'email.dispatch', {}, { dedupeKey: 'email.dispatch', maxAttempts: 1 });
+  const settings = await getSystemSettings(db);
+  if (settings.autoBackupEnabled && (await autoBackupDue(config, settings.autoBackupIntervalHours))) {
+    await enqueue(db, 'backup.auto', {}, { dedupeKey: 'backup.auto', maxAttempts: 2 });
+  }
   if (imapConfigured(config)) await enqueue(db, 'email.inbound', {}, { dedupeKey: 'email.inbound', maxAttempts: 1 });
   const [a1] = await db
     .select()
