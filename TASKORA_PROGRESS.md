@@ -38,10 +38,11 @@ All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 - Recurring tickets (preventive maintenance schedules) with run-now.
 - Ticket checklists, dispatch board (technicians × days), session management (list/revoke, admin revoke), configurable login rate limit.
 - Customer portal MVP (`/portal`, separate session realm and CSRF, contact-scoped tickets, replies, new requests, public KB) with security tests.
+- Ticket merge (notes/time/attachments/checklist/watchers move to the kept ticket), portal self-service password reset, admin System Health tab (worker heartbeat, job queue with retry, DB size/version/migrations).
 - CSV data import (companies, contacts, CIs) with preview, matching and Autotask-style headers.
 - Generated REST API reference `docs/api.md` (287 endpoints with permissions).
 - Production bundles (`dist/server.js`, `dist/worker.js`) smoke-tested with NODE_ENV=production against PostgreSQL.
-- Final verification of session 1: `npm run typecheck` clean, 102 API tests (15 files) + 3 web unit tests passing, `npm run build` succeeds, Playwright E2E 2/2 passing.
+- Final verification of session 1: `npm run typecheck` clean, 105 API tests (15 files) + 3 web unit tests passing, `npm run build` succeeds, Playwright E2E 2/2 passing.
 
 ## Known gaps
 
