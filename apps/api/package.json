@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate-cli.ts",
     "db:seed:demo": "tsx src/db/seed/demo-cli.ts",
-    "admin:reset-password": "tsx src/cli/reset-password.ts"
+    "admin:reset-password": "tsx src/cli/reset-password.ts",
+    "docs:api": "tsx src/cli/api-docs.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",

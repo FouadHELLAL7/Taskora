@@ -31,6 +31,18 @@ export async function buildApp({ db, config, logger }: BuildOptions): Promise<Fa
   app.decorate('db', db);
   app.decorate('config', config);
 
+  // Route catalogue (method, path, permission) used to generate docs/api.md.
+  const routeCatalog: { method: string; url: string; perm: string | null; public: boolean }[] = [];
+  app.decorate('routeCatalog', routeCatalog);
+  app.addHook('onRoute', (route) => {
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    const cfg = (route.config ?? {}) as { perm?: string | string[]; public?: boolean };
+    for (const method of methods) {
+      if (method === 'HEAD') continue;
+      routeCatalog.push({ method, url: route.url, perm: cfg.perm ? ([] as string[]).concat(cfg.perm).join(' or ') : null, public: !!cfg.public });
+    }
+  });
+
   await app.register(helmet, {
     // The SPA is served by nginx (production) or Vite (development); the API only returns JSON/files.
     contentSecurityPolicy: false,

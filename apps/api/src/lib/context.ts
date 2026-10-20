@@ -22,6 +22,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     db: Db;
     config: Config;
+    routeCatalog: { method: string; url: string; perm: string | null; public: boolean }[];
   }
   interface FastifyRequest {
     user: AuthUser | null;

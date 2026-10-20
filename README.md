@@ -63,6 +63,7 @@ docs/           research, deployment guide
 
 ## Documentation
 
+- [docs/api.md](docs/api.md) – REST API reference (generated: `npm run docs:api -w @taskora/api`)
 - [TASKORA_ARCHITECTURE.md](TASKORA_ARCHITECTURE.md) – architecture and data model overview
 - [TASKORA_DECISIONS.md](TASKORA_DECISIONS.md) – architecture decision log
 - [TASKORA_ROADMAP.md](TASKORA_ROADMAP.md) – phases and scope
