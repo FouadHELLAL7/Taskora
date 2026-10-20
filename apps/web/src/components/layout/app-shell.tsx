@@ -18,7 +18,10 @@ import { ChangePasswordDialog } from './change-password';
 
 function readCollapsed() {
   try {
-    return localStorage.getItem('taskora-sidebar') === 'collapsed';
+    // Narrow screens start with the compact sidebar unless the user chose otherwise.
+    const saved = localStorage.getItem('taskora-sidebar');
+    if (!saved) return window.innerWidth < 1100;
+    return saved === 'collapsed';
   } catch {
     return false;
   }

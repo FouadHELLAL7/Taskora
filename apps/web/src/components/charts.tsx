@@ -67,7 +67,7 @@ export function ColumnChart({
   const ticks = niceTicks(max);
   const top = ticks[ticks.length - 1]!;
   const w = 100 / data.length;
-  const labelEvery = Math.ceil(data.length / 8);
+  const labelEvery = Math.max(1, Math.ceil(data.length / 7));
   return (
     <div className="relative">
       <div className="flex gap-2">
@@ -128,12 +128,14 @@ export function ColumnChart({
           )}
         </div>
       </div>
-      <div className="ml-6 mt-1 flex text-[10px] text-subtle">
-        {data.map((d, i) => (
-          <span key={d.x} className="truncate text-center" style={{ width: `${w}%` }}>
-            {i % labelEvery === 0 ? d.x.slice(5) : ''}
-          </span>
-        ))}
+      <div className="relative ml-6 mt-1 h-3 text-[10px] text-subtle">
+        {data.map((d, i) =>
+          i % labelEvery === 0 ? (
+            <span key={d.x} className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${(i + 0.5) * w}%` }}>
+              {d.x.length === 10 ? d.x.slice(5).replace('-', '/') : d.x}
+            </span>
+          ) : null,
+        )}
       </div>
       <Legend series={series} />
     </div>
