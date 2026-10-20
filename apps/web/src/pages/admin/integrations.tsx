@@ -221,7 +221,7 @@ function SettingsForm({ view, manage }: { view: Action1View; manage: boolean }) 
 
 function OrgMapping({ manage }: { manage: boolean }) {
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ['action1-orgs'], queryFn: () => api.get<{ data: Org[] }>('/integrations/action1/organizations') });
+  const q = useQuery({ queryKey: ['action1-orgs'], queryFn: () => api.get<Org[]>('/integrations/action1/organizations') });
   const patch = useMutation({
     mutationFn: ({ id, body }: { id: number; body: Record<string, unknown> }) => api.patch<Org & { warning: { message: string } | null }>(`/integrations/action1/organizations/${id}`, body),
     onSuccess: (r) => {
@@ -259,7 +259,7 @@ function OrgMapping({ manage }: { manage: boolean }) {
   return (
     <Card>
       <CardHeader title="Organization → company mapping" description="Devices are only linked or created for organizations explicitly mapped to a company. Organizations appear after the first sync." />
-      <DataTable columns={cols} data={q.data?.data} loading={q.isLoading} />
+      <DataTable columns={cols} data={q.data} loading={q.isLoading} />
     </Card>
   );
 }
