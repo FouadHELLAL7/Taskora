@@ -173,6 +173,52 @@ export async function adminRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  /* ---------------------------------------------------------- system health */
+
+  app.get('/admin/system-health', { config: { perm: 'settings.manage' } }, async () => {
+    const [db] = await app.db
+      .execute<{ version: string; size: string }>(sql`select version() as version, pg_database_size(current_database())::text as size`)
+      .then((r) => r.rows);
+    const jobs = await app.db.execute<{ type: string; status: string; n: number }>(sql`select type, status, count(*)::int as n from jobs group by type, status order by type`).then((r) => r.rows);
+    const [last] = await app.db.execute<{ at: string | null }>(sql`select max(finished_at) as at from jobs where status = 'done'`).then((r) => r.rows);
+    const failed = await app.db
+      .select({ id: s.jobs.id, type: s.jobs.type, attempts: s.jobs.attempts, lastError: s.jobs.lastError, finishedAt: s.jobs.finishedAt })
+      .from(s.jobs)
+      .where(eq(s.jobs.status, 'failed'))
+      .orderBy(desc(s.jobs.id))
+      .limit(20);
+    const [migrations] = await app.db
+      .execute<{ n: number }>(sql`select count(*)::int as n from drizzle.__drizzle_migrations`)
+      .then((r) => r.rows)
+      .catch(() => [{ n: 0 }]);
+    const integrations = await app.db
+      .select({ provider: s.integrations.provider, enabled: s.integrations.enabled, status: s.integrations.status, lastSuccessAt: s.integrations.lastSuccessAt, lastError: s.integrations.lastError })
+      .from(s.integrations);
+    const lastAt = last?.at ? new Date(last.at) : null;
+    return {
+      version: process.env.TASKORA_VERSION ?? 'dev',
+      node: process.version,
+      uptimeSeconds: Math.round(process.uptime()),
+      database: { version: db?.version?.split(' ').slice(0, 2).join(' '), sizeBytes: Number(db?.size ?? 0), migrations: migrations?.n ?? 0 },
+      worker: { lastJobFinishedAt: lastAt, alive: !!lastAt && Date.now() - lastAt.getTime() < 5 * 60_000 },
+      jobs,
+      failedJobs: failed,
+      mail: { smtp: !!(app.config.SMTP_HOST && app.config.SMTP_FROM), imap: !!(app.config.IMAP_HOST && app.config.IMAP_USER) },
+      integrations,
+    };
+  });
+
+  app.post('/admin/jobs/:id/retry', { config: { perm: 'settings.manage' } }, async (req) => {
+    const [row] = await app.db
+      .update(s.jobs)
+      .set({ status: 'pending', attempts: 0, runAt: new Date(), lastError: null, finishedAt: null })
+      .where(and(eq(s.jobs.id, idOf(req)), eq(s.jobs.status, 'failed')))
+      .returning({ id: s.jobs.id });
+    if (!row) throw notFound('Failed job');
+    await audit(app.db, req, { action: 'update', entityType: 'job', entityId: row.id, summary: 'Job retried' });
+    return { ok: true };
+  });
+
   /* ----------------------------------------------------------- audit logs */
 
   app.get('/audit-logs', { config: { perm: 'audit.read' } }, async (req) => {

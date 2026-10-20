@@ -149,3 +149,16 @@ describe('permissions', () => {
     expect((await admin.delete(`/api/v1/roles/${tech.id}`)).status).toBe(400);
   });
 });
+
+describe('system health', () => {
+  it('reports database, worker and job information to administrators only', async () => {
+    const admin = await userClient(ctx, 'administrator');
+    const res = await admin.get('/api/v1/admin/system-health');
+    expect(res.status).toBe(200);
+    expect(res.body.database.sizeBytes).toBeGreaterThan(0);
+    expect(res.body.database.migrations).toBeGreaterThan(0);
+    expect(res.body.worker).toHaveProperty('alive');
+    const tech = await userClient(ctx, 'technician');
+    expect((await tech.get('/api/v1/admin/system-health')).status).toBe(403);
+  });
+});

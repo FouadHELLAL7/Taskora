@@ -16,6 +16,7 @@ import { SettingsTable } from '@/components/admin/settings-table';
 import { timezoneOptions } from '@/components/admin/timezones';
 import { useTabParam } from '@/components/admin/tabs';
 import { InboundEmailLog } from '@/components/admin/inbound-email';
+import { SystemHealth } from '@/components/admin/system-health';
 import { EntityPicker } from '@/components/entity-picker';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,7 +40,11 @@ export default function SystemSettingsPage() {
             <TabsTrigger value="billing-codes">Billing codes</TabsTrigger>
             <TabsTrigger value="ci-types">CI types</TabsTrigger>
             <TabsTrigger value="templates">Notification templates</TabsTrigger>
+            <TabsTrigger value="health">Health</TabsTrigger>
           </TabsList>
+          <TabsContent value="health" className="mt-4">
+            <SystemHealth />
+          </TabsContent>
           <TabsContent value="general" className="mt-4">
             <GeneralSettings />
           </TabsContent>
