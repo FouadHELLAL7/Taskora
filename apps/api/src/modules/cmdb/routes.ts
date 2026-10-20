@@ -41,7 +41,7 @@ export async function cmdbRoutes(app: FastifyInstance) {
       warranty === 'expiring' ? sql`${s.configurationItems.warrantyExpiresAt} between ${today()} and (current_date + 90)` : undefined,
       boolParam(q.attention)
         ? sql`exists (select 1 from action1_endpoints e where e.configuration_item_id = ${s.configurationItems.id}
-                and (e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.online_status = 'Disconnected'))`
+                and (e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.agent_status = 'Disconnected'))`
         : undefined,
       searchAny(q.q, [
         s.configurationItems.name,
@@ -78,7 +78,7 @@ export async function cmdbRoutes(app: FastifyInstance) {
         warrantyExpiresAt: s.configurationItems.warrantyExpiresAt,
         lastSeenAt: s.configurationItems.lastSeenAt,
         source: s.configurationItems.source,
-        onlineStatus: sql<string | null>`(select e.online_status from action1_endpoints e where e.configuration_item_id = ${s.configurationItems.id})`,
+        agentStatus: sql<string | null>`(select e.agent_status from action1_endpoints e where e.configuration_item_id = ${s.configurationItems.id})`,
         rebootRequired: sql<boolean | null>`(select e.reboot_required from action1_endpoints e where e.configuration_item_id = ${s.configurationItems.id})`,
         missingCriticalUpdates: sql<number | null>`(select e.missing_critical_updates from action1_endpoints e where e.configuration_item_id = ${s.configurationItems.id})`,
         openTickets: sql<number>`(select count(*)::int from tickets t join ticket_statuses st on st.id = t.status_id where t.configuration_item_id = ${s.configurationItems.id} and st.category not in ('resolved','closed'))`,

@@ -120,7 +120,7 @@ export async function crmRoutes(app: FastifyInstance) {
         count(*) filter (where c.lifecycle_status = 'active')::int as active,
         count(*)::int as total,
         count(e.id)::int as managed,
-        count(e.id) filter (where e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.online_status = 'Disconnected')::int as attention
+        count(e.id) filter (where e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.agent_status = 'Disconnected')::int as attention
       from configuration_items c
       left join action1_endpoints e on e.configuration_item_id = c.id
       where c.company_id = ${id}`).then((r) => r.rows);

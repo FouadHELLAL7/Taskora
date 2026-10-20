@@ -87,7 +87,7 @@ export async function reportRoutes(app: FastifyInstance) {
         (select count(*) from companies where is_active and type = 'customer')::int as "activeCompanies",
         (select count(*) from configuration_items where lifecycle_status = 'active')::int as "managedCis",
         (select count(*) from action1_endpoints)::int as "syncedEndpoints",
-        (select count(*) from action1_endpoints e where e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.online_status = 'Disconnected')::int as "devicesAttention",
+        (select count(*) from action1_endpoints e where e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.agent_status = 'Disconnected')::int as "devicesAttention",
         (select count(*) from action1_endpoints where match_status in ('unmatched','conflict'))::int as "endpointsNeedReview",
         (select count(*) from configuration_items where warranty_expires_at between current_date and current_date + 60)::int as "warrantyExpiring"`);
 
@@ -123,10 +123,10 @@ export async function reportRoutes(app: FastifyInstance) {
         (select count(*) from tickets t where date_trunc('day', t.resolved_at) = d and ${scope})::int as resolved
       from days order by d`);
     const attentionDevices = await rows(sql`
-      select c.id, c.name, co.name as "companyName", e.online_status as "onlineStatus", e.reboot_required as "rebootRequired",
+      select c.id, c.name, co.name as "companyName", e.agent_status as "agentStatus", e.reboot_required as "rebootRequired",
              e.missing_critical_updates as "missingCriticalUpdates", e.last_seen_at as "lastSeenAt"
       from action1_endpoints e join configuration_items c on c.id = e.configuration_item_id join companies co on co.id = c.company_id
-      where e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.online_status = 'Disconnected'
+      where e.reboot_required or coalesce(e.missing_critical_updates,0) > 0 or e.agent_status = 'Disconnected'
       order by coalesce(e.missing_critical_updates,0) desc, e.last_seen_at asc nulls first limit 8`);
 
     return { range: { from, to }, kpi, time, assets, integration: integration ?? null, byStatus, byPriority, byQueue, workload, trend, attentionDevices };
