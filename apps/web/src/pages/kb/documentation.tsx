@@ -1,6 +1,5 @@
-import { PageHeader } from '@/components/page';
+import { ArticleList } from './list';
 
-// STUB: replaced by the real implementation.
-export default function Page() {
-  return <PageHeader title="kb/documentation" subtitle="Not implemented yet" />;
+export default function DocumentationPage() {
+  return <ArticleList scope="docs" />;
 }
