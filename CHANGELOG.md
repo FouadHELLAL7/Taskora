@@ -15,3 +15,6 @@
 - Background worker with Postgres job queue.
 - Docker images, docker-compose, nginx, Ubuntu install/backup/restore/update scripts, CI workflow.
 - Fictional demo data seed (development only).
+- E-mail: SMTP notifications, customer replies from notes, IMAP inbound e-mail to ticket.
+- Recurring tickets.
+- Playwright end-to-end tests.

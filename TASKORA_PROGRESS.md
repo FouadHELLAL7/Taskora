@@ -31,6 +31,13 @@ Opportunities pipeline (drag & drop), products, asset types with counts, softwar
 
 All routes in `apps/web/src/App.tsx` are implemented; `npx vite build` succeeds.
 
+## Added later in session 1
+
+- Outbound e-mail notifications (SMTP) with per-user opt-out; customer-visible notes can be e-mailed to the ticket contact.
+- Inbound e-mail → ticket (IMAP) with reply threading on `[TKA-…]`, fallback company, processing log.
+- Recurring tickets (preventive maintenance schedules) with run-now.
+- Playwright E2E tests; web unit tests; 91 API tests.
+
 ## Known gaps
 
 - Browser E2E tests are not yet wired into CI (they need a running stack with a known user).

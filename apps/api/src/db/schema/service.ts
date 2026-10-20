@@ -411,6 +411,23 @@ export const ticketRelations = pgTable(
   (t) => [uniqueIndex('ticket_relations_uq').on(t.ticketId, t.relatedTicketId)],
 );
 
+export const ticketChecklistItems = pgTable(
+  'ticket_checklist_items',
+  {
+    id: id(),
+    ticketId: integer('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    isDone: boolean('is_done').notNull().default(false),
+    doneById: integer('done_by_id').references(() => users.id, { onDelete: 'set null' }),
+    doneAt: timestamp('done_at', { withTimezone: true }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index('ticket_checklist_ticket_idx').on(t.ticketId)],
+);
+
 export const ticketTemplates = pgTable('ticket_templates', {
   id: id(),
   name: text('name').notNull().unique(),

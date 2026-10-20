@@ -38,6 +38,7 @@ import { CustomFieldsEditor, CustomFieldsView } from '@/components/custom-fields
 import { Action1Panel } from '@/components/action1-panel';
 import { Timeline } from '@/components/tickets/timeline';
 import { LogTimeDialog } from '@/components/tickets/log-time-dialog';
+import { TicketChecklist } from '@/components/tickets/checklist';
 import { useTimer } from '@/components/layout/timer-widget';
 import { handleFormError } from '@/components/form';
 import type { TicketDetail, TimelineItem } from '@/components/tickets/ticket-types';
@@ -318,6 +319,7 @@ export default function TicketDetailPage() {
 
         {/* ------------------------------------------------------ side panel */}
         <aside className="space-y-4">
+          <TicketChecklist ticketId={id} canWrite={canWrite} />
           <ContactCard t={t} canWrite={canWrite} onChange={(contactId) => update.mutate({ contactId })} />
           <DeviceCard t={t} canWrite={canWrite} onChange={(configurationItemId) => update.mutate({ configurationItemId })} />
           <Card>
