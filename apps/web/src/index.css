@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Neutral slate surfaces with an indigo accent; every
+ * component reads these variables so light and dark themes stay in sync.
+ */
+:root {
+  --background: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --subtle: #94a3b8;
+  --border: #e2e6ec;
+  --border-strong: #cbd2dc;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-fg: #ffffff;
+  --primary-soft: #eef2ff;
+  --ring: #6366f1;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --warning: #d97706;
+  --warning-soft: #fffbeb;
+  --success: #16a34a;
+  --success-soft: #f0fdf4;
+  --info: #0284c7;
+  --info-soft: #f0f9ff;
+  --sidebar: #0f172a;
+  --sidebar-fg: #cbd5e1;
+  --sidebar-muted: #64748b;
+  --sidebar-active: #1e293b;
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.04);
+}
+
+.dark {
+  --background: #0b0f17;
+  --surface: #111724;
+  --surface-2: #161d2c;
+  --foreground: #e5e9f0;
+  --muted: #8b97ab;
+  --subtle: #5d6a80;
+  --border: #222b3b;
+  --border-strong: #2e394c;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --primary-fg: #ffffff;
+  --primary-soft: #1e1b4b;
+  --ring: #818cf8;
+  --danger: #f87171;
+  --danger-soft: #2a1215;
+  --warning: #fbbf24;
+  --warning-soft: #2a1f0b;
+  --success: #4ade80;
+  --success-soft: #0f2418;
+  --info: #38bdf8;
+  --info-soft: #0b2030;
+  --sidebar: #080b12;
+  --sidebar-fg: #b4bfd1;
+  --sidebar-muted: #56627a;
+  --sidebar-active: #161d2c;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-ring: var(--ring);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-active: var(--sidebar-active);
+  --font-sans: 'Inter', 'InterVariable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  --shadow-card: var(--shadow);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    font-size: 14px;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    opacity: 0.6;
+  }
+  .dark input[type='date']::-webkit-calendar-picker-indicator,
+  .dark input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+
+@layer components {
+  .prose-note {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.55;
+  }
+  .markdown h1 { font-size: 1.4rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+  .markdown h2 { font-size: 1.2rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+  .markdown h3 { font-size: 1.05rem; font-weight: 600; margin: 0.8rem 0 0.4rem; }
+  .markdown p { margin: 0.5rem 0; line-height: 1.6; }
+  .markdown ul { list-style: disc; padding-left: 1.4rem; margin: 0.5rem 0; }
+  .markdown ol { list-style: decimal; padding-left: 1.4rem; margin: 0.5rem 0; }
+  .markdown code { font-family: var(--font-mono); background: var(--surface-2); padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.9em; }
+  .markdown pre { background: var(--surface-2); padding: 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.6rem 0; }
+  .markdown pre code { background: none; padding: 0; }
+  .markdown a { color: var(--primary); text-decoration: underline; }
+  .markdown blockquote { border-left: 3px solid var(--border-strong); padding-left: 0.8rem; color: var(--muted); }
+  .scrollbar-thin { scrollbar-width: thin; }
+}
