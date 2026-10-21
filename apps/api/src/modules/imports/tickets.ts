@@ -271,6 +271,20 @@ export async function importTicketRows(
       }
     }
 
+    // A row without a ticket number is the same ticket again on re-import when
+    // company, title and creation time all match, so importing a file twice
+    // does not duplicate it. (Without a "Created" date it is always new.)
+    const createdAt = date('createdAt');
+    let target = existing;
+    if (!target && !r.ticketNumber && createdAt && companyId > 0) {
+      const [same] = await tx
+        .select({ id: s.tickets.id })
+        .from(s.tickets)
+        .where(and(eq(s.tickets.companyId, companyId), sql`lower(${s.tickets.title}) = ${lc(r.title!)}`, eq(s.tickets.createdAt, createdAt)))
+        .limit(1);
+      if (same) target = { id: same.id, companyId };
+    }
+
     // Status and priority map by name, then by meaning (e.g. "Complete" → closed).
     let status: (typeof statuses)[number] | undefined;
     if (r.status) {
@@ -278,7 +292,7 @@ export async function importTicketRows(
       if (!status) {
         const cat = statusCategoryFor(r.status);
         status = cat ? statuses.find((x) => x.category === cat) : undefined;
-        warnings.push(status ? `Status "${r.status}" mapped to "${status.name}"` : `Status "${r.status}" not found — ${existing ? 'unchanged' : `using "${defaultStatus.name}"`}`);
+        warnings.push(status ? `Status "${r.status}" mapped to "${status.name}"` : `Status "${r.status}" not found — ${target ? 'unchanged' : `using "${defaultStatus.name}"`}`);
       }
     }
     let priority: (typeof priorities)[number] | undefined;
@@ -287,7 +301,7 @@ export async function importTicketRows(
       if (!priority) {
         const level = priorityLevelFor(r.priority);
         priority = level ? priorities.find((x) => x.level === level) : undefined;
-        warnings.push(priority ? `Priority "${r.priority}" mapped to "${priority.name}"` : `Priority "${r.priority}" not found — ${existing ? 'unchanged' : `using "${defaultPriority.name}"`}`);
+        warnings.push(priority ? `Priority "${r.priority}" mapped to "${priority.name}"` : `Priority "${r.priority}" not found — ${target ? 'unchanged' : `using "${defaultPriority.name}"`}`);
       }
     }
 
@@ -345,7 +359,6 @@ export async function importTicketRows(
       if (Number.isFinite(h) && h >= 0 && h < 10000) minutes = Math.round(h * 60);
       else warnings.push(`Hours worked "${r.hoursWorked}" is not a number — ignored`);
     }
-    const createdAt = date('createdAt');
     const resolvedAt = date('resolvedAt');
     const dueAt = date('dueAt');
     const noteDate = date('noteDate');
@@ -356,8 +369,8 @@ export async function importTicketRows(
     const pending = (companyId < 0 || [queueId, ticketTypeId, sourceId, issueTypeId, subIssueTypeId, contactId].some((v) => typeof v === 'number' && v < 0)) as boolean;
 
     try {
-      if (existing) {
-        if (!opts.dryRun && existing.id > 0 && !pending) {
+      if (target) {
+        if (!opts.dryRun && target.id > 0 && !pending) {
           const patch: Record<string, unknown> = {};
           const set = (k: string, v: unknown) => v !== undefined && v !== null && (patch[k] = v);
           set('title', r.title);
@@ -375,19 +388,19 @@ export async function importTicketRows(
           set('configurationItemId', configurationItemId);
           set('dueAt', dueAt?.toISOString());
           set('tags', tags);
-          await updateTicket({ db: tx, userId: opts.userId }, existing.id, patch);
+          await updateTicket({ db: tx, userId: opts.userId }, target.id, patch);
           if (resolvedAt && status && (status.category === 'resolved' || status.category === 'closed')) {
-            await tx.update(s.tickets).set({ resolvedAt, ...(status.category === 'closed' ? { closedAt: resolvedAt } : {}) }).where(eq(s.tickets.id, existing.id));
+            await tx.update(s.tickets).set({ resolvedAt, ...(status.category === 'closed' ? { closedAt: resolvedAt } : {}) }).where(eq(s.tickets.id, target.id));
           }
           // Hours worked tops up logged time to the CSV value (never removes time).
           if (minutes) {
-            const [{ logged }] = (await tx.execute<{ logged: number }>(sql`select coalesce(sum(duration_minutes),0)::int as logged from time_entries where ticket_id = ${existing.id}`)).rows as [{ logged: number }];
+            const [{ logged }] = (await tx.execute<{ logged: number }>(sql`select coalesce(sum(duration_minutes),0)::int as logged from time_entries where ticket_id = ${target.id}`)).rows as [{ logged: number }];
             if (minutes > logged) {
-              const [t] = await tx.select({ assignedUserId: s.tickets.assignedUserId, contractId: s.tickets.contractId, createdAt: s.tickets.createdAt }).from(s.tickets).where(eq(s.tickets.id, existing.id));
-              await insertTime(tx, { ticketId: existing.id, companyId: existing.companyId, contractId: t!.contractId, userId: t!.assignedUserId ?? opts.userId, approverId: opts.userId, startedAt: t!.createdAt, minutes: minutes - logged });
+              const [t] = await tx.select({ assignedUserId: s.tickets.assignedUserId, contractId: s.tickets.contractId, createdAt: s.tickets.createdAt }).from(s.tickets).where(eq(s.tickets.id, target.id));
+              await insertTime(tx, { ticketId: target.id, companyId: target.companyId, contractId: t!.contractId, userId: t!.assignedUserId ?? opts.userId, approverId: opts.userId, startedAt: t!.createdAt, minutes: minutes - logged });
             }
           }
-          for (const n of notes) await addNote(existing.id, n.body, n.visibility, n.at ?? noteDate ?? now);
+          for (const n of notes) await addNote(target.id, n.body, n.visibility, n.at ?? noteDate ?? now);
         }
         results.push({ row: rowNo, ok: true, action: 'update', label, ...(warnings.length ? { warnings } : {}) });
         continue;

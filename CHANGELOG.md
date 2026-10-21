@@ -5,6 +5,10 @@
 ### Added
 - Ticket CSV import (Tickets → Import, or Admin → Data Import) with notes, hours worked, created/resolved dates, status/priority mapping, optional creation of missing companies/contacts/picklist values, and safe re-import; ticket CSV export with a column chooser (adds description, notes, resolution and more). See [docs/ticket-import.md](docs/ticket-import.md).
 
+### Fixed
+- Re-importing a ticket CSV no longer duplicates rows that have no ticket number: they match an existing ticket with the same company, title and "Created" date.
+- Docker: the worker has a heartbeat healthcheck, so `docker compose up --wait` works.
+
 ## [0.2.0] — 2026-10-20
 
 ### Added

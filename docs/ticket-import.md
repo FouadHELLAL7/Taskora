@@ -48,7 +48,7 @@ Only **Title** and **Company** are required, and only for new tickets. Header na
 ### Rules
 
 - **Several notes for one ticket:** repeat the ticket number on more rows. Each row adds its note; the other cells can stay empty.
-- **Safe re-import:** a note that is already on the ticket is not added again. "Hours worked" only tops logged time up to the CSV value, so importing the same file twice changes nothing.
+- **Safe re-import:** a note that is already on the ticket is not added again. "Hours worked" only tops logged time up to the CSV value, so importing the same file twice changes nothing. A row without a ticket number is recognised as the same ticket when its company, title and "Created" date match an existing ticket; without a "Created" date such a row always creates a new ticket.
 - **Notes from a Taskora export:** the Notes column is split back into separate notes, keeping each note's date and visibility.
 - **Dates** can be `dd/mm/yyyy hh:mm`, `yyyy-mm-dd hh:mm`, `mm/dd/yyyy h:mm AM/PM` or ISO 8601. Values without a time zone are read in the organisation time zone (System Settings → General). If a date could be either day-first or month-first, it is read day-first.
 - **History does not raise alarms:** imported tickets send no assignment notifications. SLA deadlines already in the past are flagged as breached straight away, so no breach e-mails are sent for old tickets. A ticket past "New" counts as responded at its creation time.

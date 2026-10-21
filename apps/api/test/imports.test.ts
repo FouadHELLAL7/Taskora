@@ -132,6 +132,15 @@ describe('CSV import', () => {
     expect(t).toMatchObject({ statusName: 'In Progress', companyName: 'Northwind Traders', tags: ['onboarding'], minutesWorked: 90 });
     const notes = (await admin.get(`/api/v1/tickets/${t.id}/timeline`)).body.data.filter((i: any) => i.kind === 'note');
     expect(notes.map((i: any) => i.note.visibility).sort()).toEqual(['internal', 'internal', 'public']);
+
+    // Importing the same file again changes nothing, including the row without a ticket number.
+    const count = async () => (await admin.get('/api/v1/tickets?statusCategory=all&pageSize=1')).body.total as number;
+    const before = await count();
+    const again = await admin.post('/api/v1/imports', { entity: 'ticket', csv, dryRun: false, createMissing: true });
+    expect(again.body).toMatchObject({ total: 6, creates: 0, updates: 6 });
+    expect(await count()).toBe(before);
+    const printers = (await admin.get('/api/v1/tickets?q=Printer on 2nd floor&statusCategory=all')).body.data;
+    expect(printers).toHaveLength(1);
   });
 
   it('requires write permissions', async () => {
