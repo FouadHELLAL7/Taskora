@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Ticket CSV import (Tickets → Import, or Admin → Data Import) with notes, hours worked, created/resolved dates, status/priority mapping, optional creation of missing companies/contacts/picklist values, and safe re-import; ticket CSV export with a column chooser (adds description, notes, resolution and more). See [docs/ticket-import.md](docs/ticket-import.md).
+
 ## [0.2.0] — 2026-10-20
 
 ### Added
@@ -36,4 +41,3 @@
 - Ticket merge, portal password reset, system health view.
 - Customer portal MVP; contract renewal and warranty reminders; ticket list column chooser.
 - Playwright end-to-end tests.
-- Ticket CSV import (Tickets → Import, or Admin → Data Import) with notes, hours worked, created/resolved dates, status/priority mapping, optional creation of missing companies/contacts/picklist values, and safe re-import; ticket CSV export with a column chooser (adds description, notes, resolution and more). See docs/ticket-import.md.
