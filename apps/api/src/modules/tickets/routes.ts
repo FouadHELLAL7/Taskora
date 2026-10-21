@@ -8,6 +8,7 @@ import {
   ticketRelationSchema,
   ticketSchema,
   ticketUpdateSchema,
+  TICKET_EXPORT_COLUMNS,
 } from '@taskora/shared';
 import * as s from '../../db/schema/index.js';
 import { audit } from '../../lib/audit.js';
@@ -201,28 +202,70 @@ export function toCsv(rows: Record<string, unknown>[], columns: [string, string]
 export async function ticketRoutes(app: FastifyInstance) {
   app.get('/tickets', { config: { perm: 'tickets.read' } }, async (req) => listTickets(app, req, req.query as Record<string, unknown>));
 
+  /**
+   * CSV export of the filtered ticket list. `columns` (comma separated keys of
+   * TICKET_EXPORT_COLUMNS) chooses and orders the columns; the default set is
+   * used when it is omitted.
+   */
   app.get('/tickets/export.csv', { config: { perm: 'tickets.read' } }, async (req, reply) => {
-    const result = await listTickets(app, req, { ...(req.query as object), page: 1, pageSize: 500 }, 10000);
+    const q = req.query as Record<string, unknown>;
+    const wanted = String(q.columns ?? '').split(',').map((k) => k.trim()).filter(Boolean);
+    const columns = wanted.length
+      ? wanted.map((k) => TICKET_EXPORT_COLUMNS.find((c) => c.key === k)).filter((c): c is (typeof TICKET_EXPORT_COLUMNS)[number] => !!c)
+      : TICKET_EXPORT_COLUMNS.filter((c) => c.default);
+    if (!columns.length) throw badRequest('Choose at least one column');
+    const result = await listTickets(app, req, { ...q, page: 1, pageSize: 500 }, 10000);
+    const ids = result.data.map((r) => r.id);
+    const keys = new Set<string>(columns.map((c) => c.key));
+    const needsExtra = ['description', 'resolution', 'contactEmail', 'accountNumber', 'subIssueTypeName', 'sourceName', 'closedAt'].some((k) => keys.has(k));
+    const extra = new Map<number, Record<string, unknown>>();
+    if (needsExtra && ids.length) {
+      const rows = await app.db
+        .select({
+          id: s.tickets.id,
+          description: s.tickets.description,
+          resolution: s.tickets.resolution,
+          closedAt: s.tickets.closedAt,
+          contactEmail: s.contacts.email,
+          accountNumber: s.companies.accountNumber,
+          subIssueTypeName: s.subIssueTypes.name,
+          sourceName: s.ticketSources.name,
+        })
+        .from(s.tickets)
+        .innerJoin(s.companies, eq(s.companies.id, s.tickets.companyId))
+        .leftJoin(s.contacts, eq(s.contacts.id, s.tickets.contactId))
+        .leftJoin(s.subIssueTypes, eq(s.subIssueTypes.id, s.tickets.subIssueTypeId))
+        .leftJoin(s.ticketSources, eq(s.ticketSources.id, s.tickets.sourceId))
+        .where(inArray(s.tickets.id, ids));
+      for (const r of rows) extra.set(r.id, r);
+    }
+    const notes = new Map<number, string>();
+    if (keys.has('notes') && ids.length) {
+      const author = alias(s.users, 'note_author');
+      const rows = await app.db
+        .select({ ticketId: s.ticketNotes.ticketId, body: s.ticketNotes.body, visibility: s.ticketNotes.visibility, createdAt: s.ticketNotes.createdAt, author: fullName(author) })
+        .from(s.ticketNotes)
+        .leftJoin(author, eq(author.id, s.ticketNotes.userId))
+        .where(inArray(s.ticketNotes.ticketId, ids))
+        .orderBy(asc(s.ticketNotes.createdAt), asc(s.ticketNotes.id));
+      for (const n of rows) {
+        const head = `[${n.createdAt.toISOString().slice(0, 16).replace('T', ' ')} UTC${n.author ? ` · ${n.author}` : ''}${n.visibility === 'public' ? ' · customer-visible' : ''}]`;
+        const prev = notes.get(n.ticketId);
+        notes.set(n.ticketId, `${prev ? `${prev}\n\n` : ''}${head}\n${n.body}`);
+      }
+    }
     const csv = toCsv(
-      result.data.map((r) => ({ ...r, slaState: r.sla.overall, hoursWorked: (r.minutesWorked / 60).toFixed(2) })),
-      [
-        ['ticketNumber', 'Ticket'],
-        ['title', 'Title'],
-        ['companyName', 'Company'],
-        ['contactName', 'Contact'],
-        ['statusName', 'Status'],
-        ['priorityName', 'Priority'],
-        ['queueName', 'Queue'],
-        ['assigneeName', 'Assigned to'],
-        ['ticketTypeName', 'Type'],
-        ['issueTypeName', 'Issue type'],
-        ['slaState', 'SLA'],
-        ['hoursWorked', 'Hours worked'],
-        ['createdAt', 'Created'],
-        ['resolvedAt', 'Resolved'],
-      ],
+      result.data.map((r) => ({
+        ...r,
+        ...extra.get(r.id),
+        notes: notes.get(r.id) ?? '',
+        slaState: r.sla.overall,
+        hoursWorked: (r.minutesWorked / 60).toFixed(2),
+      })),
+      columns.map((c) => [c.key, c.label]),
     );
-    return reply.header('content-type', 'text/csv; charset=utf-8').header('content-disposition', 'attachment; filename="tickets.csv"').send(csv);
+    // UTF-8 BOM so Excel shows accented characters correctly.
+    return reply.header('content-type', 'text/csv; charset=utf-8').header('content-disposition', 'attachment; filename="tickets.csv"').send(`\uFEFF${csv}`);
   });
 
   /** Lightweight counters for sidebar badges and the "My Work" header. */

@@ -9,6 +9,7 @@ import { badRequest } from '../../lib/errors.js';
 import { currentUser } from '../../lib/context.js';
 import { nextSequence } from '../../lib/query.js';
 import { getSystemSettings } from '../../lib/settings.js';
+import { importTicketRows, TICKET_ALIASES, TICKET_IGNORED } from './tickets.js';
 
 /** RFC 4180-style CSV parser (quotes, escaped quotes, CRLF, ; or , delimiter). */
 export function parseCsv(text: string): string[][] {
@@ -72,6 +73,7 @@ const ALIASES: Record<string, Record<string, string>> = {
     installdate: 'installDate', warrantyexpiration: 'warrantyExpiresAt', warrantyexpirationdate: 'warrantyExpiresAt', warranty: 'warrantyExpiresAt',
     status: 'lifecycleStatus', lifecycle: 'lifecycleStatus', notes: 'notes',
   },
+  ticket: TICKET_ALIASES,
 };
 
 const truthy = (v: string) => !/^(0|false|no|n|inactive|non?)$/i.test(v.trim());
@@ -91,32 +93,51 @@ interface RowResult {
   action?: 'create' | 'update';
   label: string;
   errors?: string[];
+  warnings?: string[];
 }
 
-const importSchema = z.object({ entity: z.enum(['company', 'contact', 'ci']), csv: z.string().min(1).max(5_000_000), dryRun: z.boolean().default(true) });
+/** Undoes the ' prefix that CSV exports add to cells starting with = + - @. */
+const unescapeCell = (v: string) => (/^'[=+\-@]/.test(v) ? v.slice(1) : v);
+
+const importSchema = z.object({
+  entity: z.enum(['company', 'contact', 'ci', 'ticket']),
+  csv: z.string().min(1).max(25_000_000),
+  dryRun: z.boolean().default(true),
+  /** Tickets only: create unknown companies, contacts and picklist values. */
+  createMissing: z.boolean().default(false),
+});
+const NEEDED = { company: 'companies.write', contact: 'companies.write', ci: 'cis.write', ticket: 'tickets.write' } as const;
 
 export async function importRoutes(app: FastifyInstance) {
-  app.post('/imports', { config: { perm: ['companies.write', 'cis.write'] }, bodyLimit: 6 * 1024 * 1024 }, async (req) => {
+  app.post('/imports', { config: { perm: ['companies.write', 'cis.write', 'tickets.write'] }, bodyLimit: 26 * 1024 * 1024 }, async (req) => {
     const input = importSchema.parse(req.body);
     const me = currentUser(req);
-    const needed = input.entity === 'ci' ? 'cis.write' : 'companies.write';
+    const needed = NEEDED[input.entity];
     if (!me.permissions.includes('*') && !me.permissions.includes(needed)) throw badRequest(`Importing ${input.entity} records requires ${needed}`);
+    if (input.createMissing && input.entity === 'ticket' && !me.permissions.includes('*') && !me.permissions.includes('companies.write')) {
+      throw badRequest('Creating missing companies and contacts requires companies.write');
+    }
     const table = parseCsv(input.csv);
     if (table.length < 2) throw badRequest('The file needs a header row and at least one data row');
-    if (table.length > 5001) throw badRequest('Import at most 5000 rows at a time');
+    const maxRows = input.entity === 'ticket' ? 20000 : 5000;
+    if (table.length > maxRows + 1) throw badRequest(`Import at most ${maxRows} rows at a time`);
     const aliases = ALIASES[input.entity]!;
     const headers = table[0]!.map((h) => aliases[norm(h)] ?? null);
-    const unmapped = table[0]!.filter((_, i) => !headers[i]);
+    const unmapped = table[0]!.filter((h, i) => !headers[i] && !(input.entity === 'ticket' && TICKET_IGNORED.has(norm(h))) && h.trim() !== '');
     const records = table.slice(1).map((cells) => {
       const rec: Record<string, string> = {};
       headers.forEach((field, i) => {
-        if (field && cells[i] !== undefined && cells[i]!.trim() !== '') rec[field] = cells[i]!.trim();
+        if (field && cells[i] !== undefined && cells[i]!.trim() !== '') rec[field] = unescapeCell(cells[i]!.trim());
       });
       return rec;
     });
 
     const results: RowResult[] = [];
     const run = async (tx: Tx) => {
+      if (input.entity === 'ticket') {
+        results.push(...(await importTicketRows(tx, records, { dryRun: input.dryRun, createMissing: input.createMissing, userId: me.id })));
+        return;
+      }
       const companies = await tx.select({ id: s.companies.id, name: s.companies.name, accountNumber: s.companies.accountNumber }).from(s.companies);
       const byName = new Map(companies.map((c) => [c.name.toLowerCase(), c.id]));
       const byAccount = new Map(companies.filter((c) => c.accountNumber).map((c) => [c.accountNumber!.toLowerCase(), c.id]));
@@ -234,6 +255,7 @@ export async function importRoutes(app: FastifyInstance) {
       total: results.length,
       valid: results.filter((r) => r.ok).length,
       creates: results.filter((r) => r.action === 'create').length,
+      warnings: results.filter((r) => r.warnings?.length).length,
       updates: results.filter((r) => r.action === 'update').length,
       unmappedColumns: unmapped,
       results,

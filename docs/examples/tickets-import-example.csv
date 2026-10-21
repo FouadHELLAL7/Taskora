@@ -1,0 +1,7 @@
+Ticket,Title,Description,Company,Contact,Contact email,Status,Priority,Queue,Assigned to,Type,Issue type,Sub-issue type,Source,Configuration item,Due date,Hours worked,Created,Resolved,Resolution,Note,Note date,Public note,Tags
+T20260115.0042,Outlook keeps crashing,Outlook closes a few seconds after opening.,Northwind Traders,Ana Trujillo,ana@northwind.example,Complete,High,Service Desk,,Incident,Microsoft 365,,,,,0.75,15/01/2026 09:12,15/01/2026 11:40,Repaired the Office installation,Repaired Office and rebuilt the Outlook profile.,15/01/2026 11:35,,email
+T20260115.0042,,,,,,,,,,,,,,,,,,,,Customer confirmed Outlook is stable.,16/01/2026 08:05,,
+T20260203.0007,New starter laptop,"Prepare a laptop for Tom, starting 1 March.",Northwind Traders,Ana Trujillo,ana@northwind.example,In Progress,Medium,Service Desk,,Service Request,,,,,28/02/2026 17:00,1.5,03/02/2026 10:00,,,Laptop ordered from supplier.,03/02/2026 10:20,"Hi Ana, the laptop has been ordered and will be ready before 1 March.",onboarding
+T20260203.0007,,,,,,,,,,,,,,,,,,,,Laptop received; installing standard apps.,10/02/2026 14:00,,
+T20260210.0013,VPN disconnects every hour,Users at the warehouse lose VPN every 60 minutes.,Contoso Ltd,Bram Willems,bram@contoso.example,Waiting Customer,High,Level 2 Support,,Incident,Network,,,,,2,10/02/2026 08:45,,,Firewall logs show the IKE lifetime set to 3600s; asked customer for a maintenance window.,10/02/2026 11:10,,vpn;network
+,Printer on 2nd floor prints blank pages,,Contoso Ltd,,,New,Low,Service Desk,,Incident,,,,,,,11/02/2026 13:30,,,,,,

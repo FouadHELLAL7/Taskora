@@ -6,7 +6,7 @@
 
 ## Highlights
 
-- **Service desk** – tickets with configurable statuses, priorities, queues, types, issue/sub-issue classification and sources; internal & customer-visible notes; activity timeline; watchers; related tickets; duplicate detection; saved views; bulk updates; ticket templates; CSV export.
+- **Service desk** – tickets with configurable statuses, priorities, queues, types, issue/sub-issue classification and sources; internal & customer-visible notes; activity timeline; watchers; related tickets; duplicate detection; saved views; bulk updates; ticket templates; CSV export with a column chooser and CSV import with notes ([docs/ticket-import.md](docs/ticket-import.md)).
 - **SLA engine** – server-side business-hours calendars (time zones, holidays), first-response and resolution targets per priority, automatic pause on waiting statuses, breach and at-risk monitoring with notifications.
 - **CRM** – companies (workspace with live KPIs), contacts, locations, activities, opportunities.
 - **CMDB** – configuration items with hardware/OS/network/warranty data, relationships, software, assigned contacts, ticket history.

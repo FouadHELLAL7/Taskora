@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookmarkPlus, Columns3, Download, Flag, Inbox, Plus, Star, Ticket, Trash2, X } from 'lucide-react';
+import { BookmarkPlus, Columns3, Download, Flag, Inbox, Plus, Star, Ticket, Trash2, Upload, X } from 'lucide-react';
+import { TICKET_EXPORT_COLUMNS } from '@taskora/shared';
 import { toast } from 'sonner';
 import { api, downloadUrl, type Paginated } from '@/lib/api';
 import { useAuth, useMe } from '@/lib/auth';
@@ -17,6 +18,19 @@ import { Checkbox, Input } from '@/components/ui/input';
 import { PriorityBadge, SlaBadge, StatusBadge, type SlaState } from '@/components/badges';
 import { EntityPicker } from '@/components/entity-picker';
 import { handleFormError } from '@/components/form';
+import { ImportPanel } from '@/pages/admin/import';
+
+const EXPORT_KEY = 'taskora.ticketExportColumns';
+const defaultExport = TICKET_EXPORT_COLUMNS.filter((c) => c.default).map((c) => c.key as string);
+function loadExportColumns(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(EXPORT_KEY) ?? 'null');
+    if (Array.isArray(v) && v.length) return v.filter((k) => TICKET_EXPORT_COLUMNS.some((c) => c.key === k));
+  } catch {
+    /* storage unavailable */
+  }
+  return defaultExport;
+}
 
 export interface TicketRow {
   id: number;
@@ -144,6 +158,19 @@ export default function TicketListPage({ preset = 'all' }: { preset?: keyof type
   const visibleColumns = ticketColumns.filter((c) => !hidden.has(String(c.header)));
   const [selection, setSelection] = useState<Record<string, boolean>>({});
   const [saveOpen, setSaveOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportColumns, setExportColumns] = useState<string[]>(loadExportColumns);
+  const setExport = (next: string[]) => {
+    setExportColumns(next);
+    try {
+      localStorage.setItem(EXPORT_KEY, JSON.stringify(next));
+    } catch {
+      /* storage unavailable */
+    }
+  };
+  // Keep the export in the order of TICKET_EXPORT_COLUMNS.
+  const toggleExport = (key: string) =>
+    setExport(TICKET_EXPORT_COLUMNS.map((c) => c.key as string).filter((k) => (k === key ? !exportColumns.includes(k) : exportColumns.includes(k))));
   const selectedIds = Object.keys(selection).filter((k) => selection[k]).map(Number);
 
   const query = useMemo(() => {
@@ -245,9 +272,40 @@ export default function TicketListPage({ preset = 'all' }: { preset?: keyof type
                   ))}
                 </DropdownContent>
               </DropdownMenu>
-              <Button onClick={() => downloadUrl('/tickets/export.csv', query as never)}>
-                <Download /> Export
-              </Button>
+              <DropdownMenu>
+                <DropdownTrigger asChild>
+                  <Button>
+                    <Download /> Export
+                  </Button>
+                </DropdownTrigger>
+                <DropdownContent className="max-h-[70vh] overflow-y-auto">
+                  <DropdownItem disabled={!exportColumns.length} onSelect={() => downloadUrl('/tickets/export.csv', { ...query, columns: exportColumns.join(',') } as never)}>
+                    <Download /> Download CSV ({exportColumns.length} columns)
+                  </DropdownItem>
+                  <DropdownSeparator />
+                  <DropdownLabel>Columns in the export</DropdownLabel>
+                  {TICKET_EXPORT_COLUMNS.map((c) => (
+                    <DropdownItem
+                      key={c.key}
+                      onSelect={(e?: Event) => {
+                        e?.preventDefault();
+                        toggleExport(c.key);
+                      }}
+                    >
+                      <input type="checkbox" readOnly checked={exportColumns.includes(c.key)} className="accent-[var(--primary)]" />
+                      {c.label}
+                    </DropdownItem>
+                  ))}
+                  <DropdownSeparator />
+                  <DropdownItem onSelect={(e?: Event) => (e?.preventDefault(), setExport(defaultExport))}>Reset to default columns</DropdownItem>
+                  <DropdownItem onSelect={(e?: Event) => (e?.preventDefault(), setExport(TICKET_EXPORT_COLUMNS.map((c) => c.key)))}>Select all columns</DropdownItem>
+                </DropdownContent>
+              </DropdownMenu>
+              {can('tickets.write') && (
+                <Button onClick={() => setImportOpen(true)}>
+                  <Upload /> Import
+                </Button>
+              )}
               {can('tickets.write') && (
                 <Button variant="primary" onClick={() => navigate('/tickets/new')}>
                   <Plus /> New ticket
@@ -341,6 +399,9 @@ export default function TicketListPage({ preset = 'all' }: { preset?: keyof type
         empty={<EmptyState icon={<Ticket />} title="No tickets match these filters" description="Adjust or reset the filters to see more tickets." />}
       />
       <SaveViewDialog open={saveOpen} onOpenChange={setSaveOpen} filters={{ ...t.filters, ...(t.q ? { q: t.q } : {}) }} />
+      <Dialog open={importOpen} onOpenChange={setImportOpen} size="xl" title="Import tickets from CSV" description="Upload a CSV (for example an edited Taskora export or an Autotask export). Preview first; nothing is saved until you import.">
+        <ImportPanel entity="ticket" />
+      </Dialog>
     </ListLayout>
   );
 }
