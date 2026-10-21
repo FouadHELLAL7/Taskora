@@ -3,7 +3,9 @@
  * workflow rules, Action1 synchronisation) and processes queued jobs.
  * Several workers can run concurrently; jobs are claimed with SKIP LOCKED.
  */
-import { hostname } from 'node:os';
+import { writeFileSync } from 'node:fs';
+import { hostname, tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { and, eq, lte, sql } from 'drizzle-orm';
 import pino from 'pino';
 import { loadConfig, type Config } from './config.js';
@@ -15,12 +17,16 @@ import { runStatusAgeRules } from './modules/automation/engine.js';
 import { runRecurringTickets } from './modules/tickets/recurring.js';
 import { runBusinessReminders } from './jobs/reminders.js';
 import { runAction1Sync } from './integrations/action1/sync.js';
-import { dispatchNotificationEmails, expireStaleEmails, sendCustomerNote, smtpConfigured } from './jobs/email.js';
+import { dispatchNotificationEmails, expireStaleEmails, sendCustomerNote } from './jobs/email.js';
+import { resolveSmtp } from './lib/mail.js';
+import { autoBackupDue, pruneAutoBackups, saveBackup } from './lib/backup.js';
+import { getSystemSettings } from './lib/settings.js';
 import { imapConfigured, pollInbox } from './jobs/inbound-email.js';
 
 const config = loadConfig();
 const log = pino({ level: config.LOG_LEVEL, base: { svc: 'worker' } });
 const workerId = `${hostname()}:${process.pid}`;
+const HEARTBEAT_FILE = join(tmpdir(), 'taskora-worker-heartbeat');
 
 type Handler = (db: Db, config: Config, job: JobRow) => Promise<unknown>;
 
@@ -37,6 +43,12 @@ const handlers: Record<string, Handler> = {
   'email.dispatch': (db, cfg) => dispatchNotificationEmails(db, cfg),
   'email.customer_note': (db, cfg, job) => sendCustomerNote(db, cfg, Number(job.payload.noteId)),
   'email.inbound': (db, cfg) => pollInbox(db, cfg, (m) => log.info({ job: 'email.inbound' }, m)),
+  'backup.auto': async (db, cfg) => {
+    const settings = await getSystemSettings(db);
+    const saved = await saveBackup(db, cfg, 'auto');
+    const pruned = await pruneAutoBackups(cfg, settings.backupRetention);
+    return { name: saved.name, sizeBytes: saved.sizeBytes, pruned };
+  },
   'maintenance.cleanup': async (db) => {
     await expireStaleEmails(db);
     await db.execute(sql`delete from sessions where expires_at < now()`);
@@ -51,7 +63,11 @@ async function schedule(db: Db) {
   await enqueue(db, 'sla.check', {}, { dedupeKey: 'sla.check', maxAttempts: 1 });
   await enqueue(db, 'workflow.status_age', {}, { dedupeKey: 'workflow.status_age', maxAttempts: 1 });
   await enqueue(db, 'tickets.recurring', {}, { dedupeKey: 'tickets.recurring', maxAttempts: 1 });
-  if (smtpConfigured(config)) await enqueue(db, 'email.dispatch', {}, { dedupeKey: 'email.dispatch', maxAttempts: 1 });
+  if (await resolveSmtp(db, config)) await enqueue(db, 'email.dispatch', {}, { dedupeKey: 'email.dispatch', maxAttempts: 1 });
+  const settings = await getSystemSettings(db);
+  if (settings.autoBackupEnabled && (await autoBackupDue(config, settings.autoBackupIntervalHours))) {
+    await enqueue(db, 'backup.auto', {}, { dedupeKey: 'backup.auto', maxAttempts: 2 });
+  }
   if (imapConfigured(config)) await enqueue(db, 'email.inbound', {}, { dedupeKey: 'email.inbound', maxAttempts: 1 });
   const [a1] = await db
     .select()
@@ -65,6 +81,18 @@ async function main() {
   await waitForDatabase(pool, 120_000, (m) => log.warn(m));
   await runMigrations(db);
   log.info({ workerId }, 'worker started');
+
+  // Liveness for the container healthcheck: the file's mtime stays fresh while
+  // the event loop runs (docker-compose.yml checks it is younger than 90 s).
+  const heartbeat = () => {
+    try {
+      writeFileSync(HEARTBEAT_FILE, new Date().toISOString());
+    } catch (err) {
+      log.warn({ err: (err as Error).message }, 'cannot write heartbeat file');
+    }
+  };
+  heartbeat();
+  setInterval(heartbeat, 15_000).unref();
 
   let stopping = false;
   let lastSchedule = 0;

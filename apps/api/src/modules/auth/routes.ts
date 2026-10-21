@@ -4,6 +4,7 @@ import { changePasswordSchema, loginSchema, setupSchema } from '@taskora/shared'
 import { roles, sessions, users } from '../../db/schema/index.js';
 import { hashPassword, randomToken, safeEqual, verifyPassword } from '../../lib/crypto.js';
 import { AppError, badRequest, conflict, unauthorized } from '../../lib/errors.js';
+import { resolveSmtp } from '../../lib/mail.js';
 import { audit } from '../../lib/audit.js';
 import { currentUser } from '../../lib/context.js';
 import { getSystemSettings, saveSystemSettings } from '../../lib/settings.js';
@@ -39,7 +40,7 @@ function expectedSetupToken(app: FastifyInstance): string | null {
 export async function authRoutes(app: FastifyInstance) {
   app.get('/setup/status', { config: { public: true } }, async () => {
     const settings = await getSystemSettings(app.db);
-    return { needsSetup: (await userCount(app)) === 0, organizationName: settings.organizationName };
+    return { needsSetup: (await userCount(app)) === 0, organizationName: settings.organizationName, logoUpdatedAt: settings.logoUpdatedAt };
   });
 
   app.post(
@@ -125,9 +126,9 @@ export async function authRoutes(app: FastifyInstance) {
     return {
       user,
       preferences: prefs?.preferences ?? {},
-      emailEnabled: !!(app.config.SMTP_HOST && app.config.SMTP_FROM),
+      emailEnabled: !!(await resolveSmtp(app.db, app.config)),
       csrfToken: req.csrfToken,
-      organization: { name: settings.organizationName, currency: settings.currency, timezone: settings.timezone },
+      organization: { name: settings.organizationName, currency: settings.currency, timezone: settings.timezone, logoUpdatedAt: settings.logoUpdatedAt },
     };
   });
 

@@ -26,6 +26,13 @@ export const systemSettingsSchema = z.object({
   inboundEmailCompanyId: z.number().int().positive().nullable().default(null),
   /** Queue for tickets created from e-mail. */
   inboundEmailQueueId: z.number().int().positive().nullable().default(null),
+  /** The worker writes a full backup to BACKUP_DIR on this schedule. */
+  autoBackupEnabled: z.boolean().default(true),
+  autoBackupIntervalHours: z.coerce.number().int().min(1).max(24 * 30).default(24),
+  /** Automatic backups kept on the server (older ones are deleted; manual ones are kept). */
+  backupRetention: z.coerce.number().int().min(1).max(365).default(7),
+  /** Set when the organization logo changes; used to bust the browser cache. */
+  logoUpdatedAt: z.string().nullable().default(null),
 });
 export type SystemSettings = z.infer<typeof systemSettingsSchema>;
 

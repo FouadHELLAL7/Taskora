@@ -36,6 +36,7 @@ export const PERMISSIONS = {
   'settings.manage': 'Manage service desk and system settings',
   'users.manage': 'Manage users and roles',
   'audit.read': 'View audit logs',
+  'backups.manage': 'Create, download and restore full backups',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -51,7 +52,7 @@ export const PERMISSION_GROUPS: { label: string; prefix: string[] }[] = [
   { label: 'Projects', prefix: ['projects.'] },
   { label: 'Knowledge', prefix: ['kb.'] },
   { label: 'Insights', prefix: ['reports.'] },
-  { label: 'Administration', prefix: ['integrations.', 'automation.', 'settings.', 'users.', 'audit.'] },
+  { label: 'Administration', prefix: ['integrations.', 'automation.', 'settings.', 'users.', 'audit.', 'backups.'] },
 ];
 
 const READ_ONLY: Permission[] = [

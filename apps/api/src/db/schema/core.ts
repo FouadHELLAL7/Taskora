@@ -106,6 +106,20 @@ export const systemSettings = pgTable('system_settings', {
   updatedAt: updatedAt(),
 });
 
+/** Small raster logos (company or organization), stored in the database so backups include them. */
+export const logos = pgTable(
+  'logos',
+  {
+    entityType: text('entity_type').notNull(),
+    entityId: integer('entity_id').notNull(),
+    mimeType: text('mime_type').notNull(),
+    /** Base64-encoded image bytes. */
+    data: text('data').notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('logos_entity_uq').on(t.entityType, t.entityId)],
+);
+
 /** Per-entity sequences used for human-readable numbers (TKA-000142, CI-000031…). */
 export const sequences = pgTable('sequences', {
   name: text('name').primaryKey(),

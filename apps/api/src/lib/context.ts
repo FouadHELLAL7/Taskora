@@ -23,6 +23,8 @@ declare module 'fastify' {
     db: Db;
     config: Config;
     routeCatalog: { method: string; url: string; perm: string | null; public: boolean }[];
+    /** Test hook: replaces the SMTP transport built from the mail settings. */
+    mailTransport: import('nodemailer').Transporter | null;
   }
   interface FastifyRequest {
     user: AuthUser | null;

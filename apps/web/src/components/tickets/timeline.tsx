@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowRightLeft, Clock, Eye, EyeOff, FileText, GitBranch, Lock, Paperclip, Pencil, Plus, Sparkles, Trash2, UserCheck, Workflow } from 'lucide-react';
+import { ArrowRightLeft, Clock, Eye, EyeOff, FileText, GitBranch, Lock, Mail, Paperclip, Pencil, Plus, Sparkles, Trash2, UserCheck, Workflow } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatMinutes } from '@taskora/shared';
 import { api } from '@/lib/api';
@@ -74,7 +74,17 @@ function describeEvent(type: string, d: Record<string, unknown>): { icon: typeof
     case 'sla_warning':
       return { icon: Clock, text: <span className="text-warning">SLA {String(d.target).replace('_', ' ')} target at risk</span> };
     case 'email_sent':
-      return { icon: Sparkles, text: <>e-mailed the note to <b>{String(d.to)}</b></> };
+      if (d.subject)
+        return {
+          icon: Mail,
+          text: (
+            <>
+              sent an e-mail to <b>{([] as unknown[]).concat(d.to ?? []).join(', ')}</b>
+              {(d.cc as string[] | undefined)?.length ? <> (cc {(d.cc as string[]).join(', ')})</> : null}
+            </>
+          ),
+        };
+      return { icon: Mail, text: <>e-mailed the note to <b>{String(d.to)}</b></> };
     case 'workflow':
       return { icon: Workflow, text: <>workflow rule <b>{String(d.rule)}</b> ran: {(d.results as string[] | undefined)?.join(', ')}</> };
     default:
@@ -187,6 +197,11 @@ function NoteItem({ ticketId, item }: { ticketId: number; item: Extract<Timeline
           ) : (
             <Badge>
               <Lock className="size-3" /> Internal
+            </Badge>
+          )}
+          {item.note.kind === 'email_out' && (
+            <Badge tone="info">
+              <Mail className="size-3" /> E-mail sent
             </Badge>
           )}
           <Tooltip content={fmtDateTime(item.at)}>

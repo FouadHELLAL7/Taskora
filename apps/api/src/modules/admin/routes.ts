@@ -5,6 +5,7 @@ import * as s from '../../db/schema/index.js';
 import { hashPassword } from '../../lib/crypto.js';
 import { audit, diff } from '../../lib/audit.js';
 import { badRequest, notFound } from '../../lib/errors.js';
+import { resolveSmtp } from '../../lib/mail.js';
 import { idOf } from '../../lib/params.js';
 import { countAll, intParam, paginated, parseList, searchAny, whereAll } from '../../lib/query.js';
 import { currentUser } from '../../lib/context.js';
@@ -203,7 +204,7 @@ export async function adminRoutes(app: FastifyInstance) {
       worker: { lastJobFinishedAt: lastAt, alive: !!lastAt && Date.now() - lastAt.getTime() < 5 * 60_000 },
       jobs,
       failedJobs: failed,
-      mail: { smtp: !!(app.config.SMTP_HOST && app.config.SMTP_FROM), imap: !!(app.config.IMAP_HOST && app.config.IMAP_USER) },
+      mail: { smtp: !!(await resolveSmtp(app.db, app.config)), imap: !!(app.config.IMAP_HOST && app.config.IMAP_USER) },
       integrations,
     };
   });

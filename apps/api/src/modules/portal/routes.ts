@@ -16,7 +16,7 @@ import { idOf } from '../../lib/params.js';
 import { likeTerm } from '../../lib/query.js';
 import { addTicketNote, createTicket, updateTicket } from '../tickets/service.js';
 import { runTicketRules } from '../automation/engine.js';
-import { createTransport, smtpConfigured } from '../../jobs/email.js';
+import { resolveSmtp, transportFor } from '../../lib/mail.js';
 import type { Db } from '../../db/client.js';
 
 export const PORTAL_COOKIE = 'taskora_portal';
@@ -129,13 +129,14 @@ export async function portalRoutes(app: FastifyInstance) {
           .from(s.contacts)
           .where(and(sql`lower(${s.contacts.email}) = ${email}`, eq(s.contacts.portalEnabled, true), eq(s.contacts.isActive, true)))
           .limit(1);
-        if (contact && smtpConfigured(app.config)) {
+        const smtp = contact ? await resolveSmtp(app.db, app.config) : null;
+        if (contact && smtp) {
           const token = await createPortalResetToken(app.db, contact.id);
           const base = (app.config.PUBLIC_URL ?? `${req.protocol}://${req.headers.host}`).replace(/\/$/, '');
           const link = `${base}/portal/reset?token=${encodeURIComponent(token)}`;
-          await createTransport(app.config)
+          await (app.mailTransport ?? transportFor(smtp))
             .sendMail({
-              from: app.config.SMTP_FROM,
+              from: smtp.from,
               to: contact.email!,
               subject: 'Reset your support portal password',
               text: `Hello ${contact.firstName},\n\nUse this link within one hour to choose a new password:\n${link}\n\nIf you did not request this, you can ignore this e-mail.`,

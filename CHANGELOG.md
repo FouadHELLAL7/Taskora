@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0] — 2026-10-20
+
+### Added
+- Backup & Restore (Administration → System): full backups of every table and uploaded file, saved on the server or downloaded; scheduled automatic backups with retention; all-or-nothing restore from a server backup or an uploaded file with an automatic pre-restore backup. New permission `backups.manage`.
+- E-mail settings page: SMTP host/port/TLS/credentials/sender/reply-to/signature configurable in the UI (password encrypted), test e-mail; environment variables remain a fallback.
+- Send e-mail from a ticket: To/Cc/Bcc, pre-filled contact and `[TKA-…]` subject, ticket attachments, signature, optional status change; recorded as a customer-visible note and timeline event.
+- Logos for client companies (companies list, company workspace, ticket contact card) and for the organization (sidebar, sign-in page).
+- Grouped navigation: collapsible sections and sub-menus; the compact sidebar shows one flyout menu per section.
+
+### Fixed
+- Action1 organization mapping tab was always empty: the UI read the organization list as `{ data: [...] }` although the API returns a plain array.
+
+### Upgrade notes
+- Rebuild and restart all services (`docker compose up -d --build`): the database migration adds the `logos` table, and a new `taskora-backups` volume is mounted on api and worker.
+
 ## [Unreleased] — branch `develop/taskora-platform`
 
 ### Added

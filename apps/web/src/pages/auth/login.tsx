@@ -5,14 +5,15 @@ import { api, ApiError, setCsrfToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
+import { logoUrl } from '@/components/logo';
 
-export function AuthCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+export function AuthCard({ title, subtitle, logo, children }: { title: string; subtitle?: string; logo?: string | null; children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center justify-center gap-2">
-          <img src="/favicon.svg" alt="" className="size-8" />
-          <span className="text-xl font-semibold tracking-tight">Taskora</span>
+          <img src={logo ?? '/favicon.svg'} alt="" className={logo ? 'h-10 max-w-40 object-contain' : 'size-8'} />
+          {!logo && <span className="text-xl font-semibold tracking-tight">Taskora</span>}
         </div>
         <div className="rounded-xl border border-border bg-surface p-6 shadow-card">
           <h1 className="text-base font-semibold">{title}</h1>
@@ -34,7 +35,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const setup = useQuery({ queryKey: ['setup-status'], queryFn: () => api.get<{ needsSetup: boolean; organizationName: string }>('/setup/status') });
+  const setup = useQuery({ queryKey: ['setup-status'], queryFn: () => api.get<{ needsSetup: boolean; organizationName: string; logoUpdatedAt?: string | null }>('/setup/status') });
 
   if (me) return <Navigate to={(location.state as { from?: string })?.from ?? '/'} replace />;
   if (setup.data?.needsSetup) return <Navigate to="/setup" replace />;
@@ -56,7 +57,7 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthCard title={`Sign in to ${setup.data?.organizationName ?? 'Taskora'}`}>
+    <AuthCard title={`Sign in to ${setup.data?.organizationName ?? 'Taskora'}`} logo={logoUrl('organization', 0, setup.data?.logoUpdatedAt)}>
       <form onSubmit={submit} className="space-y-3">
         <div>
           <Label htmlFor="email">E-mail</Label>

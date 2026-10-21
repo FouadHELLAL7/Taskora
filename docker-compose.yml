@@ -26,7 +26,7 @@ x-logging: &logging
 # Settings shared by api and worker. Values come from .env (see .env.example).
 # Everything in .env is also passed through `env_file`, which is how optional
 # settings such as TASKORA_SETUP_TOKEN reach the API; the explicit values
-# below take precedence (and NODE_ENV, DATABASE_URL and UPLOAD_DIR are fixed
+# below take precedence (and NODE_ENV, DATABASE_URL, UPLOAD_DIR and BACKUP_DIR are fixed
 # for this container layout).
 x-app-environment: &app-environment
   NODE_ENV: production
@@ -37,6 +37,8 @@ x-app-environment: &app-environment
   COOKIE_SECURE: ${COOKIE_SECURE:-auto}
   TRUST_PROXY: ${TRUST_PROXY:-true}
   UPLOAD_DIR: /app/data/uploads
+  BACKUP_DIR: /app/data/backups
+  MAX_RESTORE_MB: ${MAX_RESTORE_MB:-512}
   MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   WORKER_POLL_MS: ${WORKER_POLL_MS:-2000}
@@ -59,6 +61,8 @@ x-app-service: &app-service
     - no-new-privileges:true
   volumes:
     - taskora-uploads:/app/data/uploads
+    # Full backups from Administration > Backup & Restore and the worker's schedule.
+    - taskora-backups:/app/data/backups
   networks:
     - db
     - app
@@ -115,10 +119,16 @@ services:
       # The API applies migrations on start; wait until it is healthy.
       api:
         condition: service_healthy
-    # The worker has no HTTP port; tini exits (and Docker restarts the
-    # container) if the worker process dies, so no healthcheck is needed.
+    # The worker has no HTTP port: it refreshes /tmp/taskora-worker-heartbeat
+    # every 15 s once migrations are done. (tini exits, and Docker restarts the
+    # container, if the worker process dies.) A real healthcheck is also needed
+    # for `docker compose up --wait`, which rejects containers without one.
     healthcheck:
-      disable: true
+      test: ["CMD", "node", "-e", "try{process.exit(Date.now()-require('fs').statSync(require('os').tmpdir()+'/taskora-worker-heartbeat').mtimeMs<90000?0:1)}catch{process.exit(1)}"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     stop_grace_period: 20s
 
   web:
@@ -158,3 +168,4 @@ networks:
 volumes:
   taskora-db:
   taskora-uploads:
+  taskora-backups:

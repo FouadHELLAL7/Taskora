@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronsLeft, ChevronsRight, Laptop, LogOut, Mail, Moon, Plus, Search, Sun, Monitor, KeyRound, Keyboard } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth, useMe } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { NAV } from './nav';
+import { SidebarNav } from './sidebar-nav';
+import { logoUrl } from '../logo';
 import { Avatar, Kbd } from '../ui/misc';
 import { Button } from '../ui/button';
-import { DropdownContent, DropdownItem, DropdownLabel, DropdownMenu, DropdownSeparator, DropdownTrigger, Tooltip } from '../ui/overlays';
+import { DropdownContent, DropdownItem, DropdownLabel, DropdownMenu, DropdownSeparator, DropdownTrigger } from '../ui/overlays';
 import { CommandPalette } from './command-palette';
 import { TimerWidget } from './timer-widget';
 import { NotificationBell } from './notification-bell';
@@ -39,6 +40,7 @@ export function AppShell() {
   const [pwOpen, setPwOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const orgLogo = logoUrl('organization', 0, me.organization.logoUpdatedAt);
 
   useEffect(() => {
     try {
@@ -61,61 +63,14 @@ export function AppShell() {
     <div className="flex h-screen overflow-hidden">
       <aside className={cn('flex shrink-0 flex-col bg-sidebar text-sidebar-fg transition-[width] duration-150', collapsed ? 'w-14' : 'w-60')}>
         <div className="flex h-12 shrink-0 items-center gap-2 px-3.5">
-          <img src="/favicon.svg" alt="" className="size-6" />
-          {!collapsed && <span className="truncate text-[15px] font-semibold tracking-tight text-white">Taskora</span>}
+          {orgLogo ? (
+            <img src={orgLogo} alt="" className="size-7 rounded bg-white object-contain p-0.5" />
+          ) : (
+            <img src="/favicon.svg" alt="" className="size-6" />
+          )}
+          {!collapsed && <span className="truncate text-[15px] font-semibold tracking-tight text-white">{orgLogo ? me.organization.name : 'Taskora'}</span>}
         </div>
-        <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin" aria-label="Main">
-          {NAV.map((section) => {
-            const items = section.items.filter((i) => !i.perm || can(i.perm));
-            if (!items.length) return null;
-            return (
-              <div key={section.label} className="mt-3">
-                {!collapsed ? (
-                  <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">{section.label}</div>
-                ) : (
-                  <div className="mx-2 mb-1 h-px bg-white/5" />
-                )}
-                {items.map((item) => {
-                  const Icon = item.icon;
-                  const badge = item.badge ? counts.data?.[item.badge] : undefined;
-                  const link = (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      className={({ isActive }) =>
-                        cn(
-                          'group flex h-7 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors hover:bg-sidebar-active hover:text-white',
-                          isActive && 'bg-sidebar-active font-medium text-white',
-                        )
-                      }
-                    >
-                      <Icon className="size-4 shrink-0 opacity-80" />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                      {!collapsed && !!badge && (
-                        <span
-                          className={cn(
-                            'ml-auto rounded px-1.5 text-[10px] font-semibold tabular-nums',
-                            item.badge === 'breached' ? 'bg-red-500/20 text-red-300' : 'bg-white/10 text-sidebar-fg',
-                          )}
-                        >
-                          {badge}
-                        </span>
-                      )}
-                    </NavLink>
-                  );
-                  return collapsed ? (
-                    <Tooltip key={item.to} content={item.label} side="right">
-                      {link}
-                    </Tooltip>
-                  ) : (
-                    link
-                  );
-                })}
-              </div>
-            );
-          })}
-        </nav>
+        <SidebarNav collapsed={collapsed} counts={counts.data} />
         <button
           onClick={() => setCollapsed((c) => !c)}
           className="flex h-9 shrink-0 cursor-pointer items-center gap-2 border-t border-white/5 px-4 text-xs text-sidebar-muted hover:text-white"

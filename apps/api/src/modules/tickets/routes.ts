@@ -343,6 +343,7 @@ export async function ticketRoutes(app: FastifyInstance) {
         t: s.tickets,
         companyName: s.companies.name,
         companyPhone: s.companies.phone,
+        companyLogoUpdatedAt: s.companies.logoUpdatedAt,
         contactName: sql<string | null>`${s.contacts.firstName} || ' ' || ${s.contacts.lastName}`,
         contactEmail: s.contacts.email,
         contactPhone: s.contacts.phone,

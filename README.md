@@ -16,8 +16,10 @@
 - **Knowledge** – knowledge base and company documentation (Markdown), linked to tickets.
 - **Automation** – workflow rules (on create/update/status age/SLA breach) with conditions, actions, execution history and loop prevention.
 - **Customer portal** – contacts sign in at `/portal` (separate authentication realm) to follow their tickets, raise requests, reply and read public KB articles; primary contacts see all company tickets. Internal notes and staff data are never exposed.
-- **E-mail** – optional SMTP notifications and IMAP inbound e-mail → ticket with reply threading on `[TKA-…]` subjects.
-- **Platform** – role-based access control enforced in the API, audit log, custom fields, notifications, global search (Ctrl+K), keyboard shortcuts, light/dark themes, background worker with a Postgres job queue.
+- **E-mail** – SMTP configurable in the UI (or via environment), notifications, **send e-mail from a ticket** (To/Cc/Bcc, ticket attachments, signature, kept as a customer-visible note) and IMAP inbound e-mail → ticket with reply threading on `[TKA-…]` subjects.
+- **Backup & restore** – full backups of all data (tickets, CRM, CMDB, Action1 sync data, settings, users, files) saved on the server on a schedule or downloaded on demand; all-or-nothing restore from the UI.
+- **Branding** – logos for client companies (lists, company workspace, tickets) and for your own organization (sidebar, sign-in page).
+- **Platform** – role-based access control enforced in the API, audit log, custom fields, notifications, global search (Ctrl+K), keyboard shortcuts, light/dark themes, a compact grouped navigation (collapsible sections and sub-menus, flyout menus in the narrow sidebar), background worker with a Postgres job queue.
 
 ## Quick start (Docker, Ubuntu Server)
 

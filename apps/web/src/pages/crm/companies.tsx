@@ -12,6 +12,7 @@ import { FilterSelect, ListLayout, PageHeader, SearchInput } from '@/components/
 import { Button } from '@/components/ui/button';
 import { Badge, EmptyState } from '@/components/ui/misc';
 import { CompanyFormDialog } from '@/components/forms/company-form';
+import { CompanyLogo } from '@/components/logo';
 
 interface CompanyRow {
   id: number;
@@ -27,6 +28,7 @@ interface CompanyRow {
   openTickets: number;
   ciCount: number;
   contactCount: number;
+  logoUpdatedAt: string | null;
 }
 
 const columns: Column<CompanyRow>[] = [
@@ -34,11 +36,12 @@ const columns: Column<CompanyRow>[] = [
     header: 'Company',
     meta: { sortKey: 'name' },
     cell: ({ row }) => (
-      <div className="min-w-0">
+      <div className="flex min-w-0 items-center gap-2">
+        <CompanyLogo companyId={row.original.id} name={row.original.name} logoUpdatedAt={row.original.logoUpdatedAt} />
         <Link to={`/companies/${row.original.id}`} className="font-medium hover:text-primary" onClick={(e) => e.stopPropagation()}>
           {row.original.name}
         </Link>
-        {row.original.accountNumber && <span className="ml-2 text-xs text-muted">{row.original.accountNumber}</span>}
+        {row.original.accountNumber && <span className="text-xs text-muted">{row.original.accountNumber}</span>}
       </div>
     ),
   },

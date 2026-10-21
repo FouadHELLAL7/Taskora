@@ -18,7 +18,7 @@ export interface Me {
   csrfToken: string;
   preferences: Record<string, unknown>;
   emailEnabled: boolean;
-  organization: { name: string; currency: string; timezone: string };
+  organization: { name: string; currency: string; timezone: string; logoUpdatedAt?: string | null };
 }
 
 interface AuthState {

@@ -79,10 +79,12 @@ COPY apps/web/package.json apps/web/
 # prebuilt binaries as optional platform packages).
 # Afterwards drop what the bundle never loads at runtime: PGlite (tests only,
 # kept by npm as an optional peer of drizzle-orm), type declarations and the
-# workspace links (@taskora/shared is bundled into dist/).
+# workspace links (@taskora/shared is bundled into dist/), plus the empty scope
+# folders npm 10 leaves for omitted dev packages (e.g. node_modules/@vitest).
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     npm ci --omit=dev --ignore-scripts --workspace=@taskora/api --include-workspace-root=false \
  && rm -rf node_modules/@electric-sql node_modules/@types node_modules/@taskora \
+ && find node_modules -mindepth 1 -maxdepth 1 -type d -empty -delete \
  && mkdir -p apps/api/node_modules
 
 # --------------------------------------------------------------------------
@@ -102,13 +104,14 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
     UPLOAD_DIR=/app/data/uploads \
+    BACKUP_DIR=/app/data/backups \
     NODE_OPTIONS=--enable-source-maps \
     TASKORA_VERSION=${TASKORA_VERSION}
 
 WORKDIR /app/apps/api
 
 # Application files are owned by root and read-only for the runtime user;
-# only /app/data (uploads volume) is writable.
+# only /app/data (uploads and backups volumes) is writable.
 COPY --from=api-deps /app/node_modules /app/node_modules
 COPY --from=api-deps /app/apps/api/node_modules ./node_modules
 # package.json provides "type": "module" for the ESM bundle in dist/.
@@ -119,9 +122,9 @@ COPY apps/api/drizzle ./drizzle
 COPY --from=build-api /src/apps/api/dist ./dist
 COPY --chmod=0755 deploy/docker-entrypoint.sh /usr/local/bin/taskora-entrypoint
 
-RUN mkdir -p /app/data/uploads \
+RUN mkdir -p /app/data/uploads /app/data/backups \
  && chown -R node:node /app/data \
- && chmod 0750 /app/data /app/data/uploads
+ && chmod 0750 /app/data /app/data/uploads /app/data/backups
 
 USER node
 EXPOSE 3000
